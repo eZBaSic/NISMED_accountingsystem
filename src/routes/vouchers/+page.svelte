@@ -333,12 +333,6 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
   </div>
 </div>
 
-{#if voucherRows.length > 1}
-  <div class="sort-instructions">
-    💡 <strong>Tip:</strong> Click on column headers (DV No., Name, Date) to sort the table
-  </div>
-{/if}
-
 <table class="voucher-table border-2 border-green-800">
   <thead>
     <tr>
@@ -501,21 +495,6 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 .sort-reset-btn:hover {
   background: oklch(0.65 0.05 25);
 }
-
-.sort-instructions {
-  background: oklch(96% 0.02 151.328); /* very light green */
-  border: 1px solid oklch(44.8% 0.119 151.328);
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: oklch(30% 0.08 151.328);
-}
-
-.sort-instructions strong {
-  color: oklch(44.8% 0.119 151.328);
-}
-
 
 .add-row-btn:hover {
   background: oklch(43.25% 0.12662 147.579);

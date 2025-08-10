@@ -298,7 +298,7 @@
 <div class="dashboard">
   <div class="page-header">
     <h1>Dashboard</h1>
-    <p class="page-subtitle">Welcome to the Accounting System</p>
+    <p class="page-subtitle">Welcome to the NISMED Accounting System</p>
   </div>
 
   {#if error}

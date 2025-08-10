@@ -135,9 +135,9 @@
       </div>
 
       <div class="text-center">
-        <p class="text-xs text-gray-500">
+        <!-- <p class="text-xs text-gray-500">
           Authorized users only. Contact the administrator if you need access.
-        </p>
+        </p> -->
       </div>
     </form>
   </div>
