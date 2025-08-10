@@ -25,7 +25,8 @@
       if (error) throw error
       summaries = data ?? []
     } catch (error) { 
-      show(error)
+      alert(`error loading database`)
+      // show(`error loading database\n${JSON.stringify(error)}`)
       summaries = [] 
     } finally {
       // show(summaries)

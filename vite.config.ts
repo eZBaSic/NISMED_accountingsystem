@@ -6,4 +6,10 @@ export default defineConfig({
     tailwindcss(),
     sveltekit(),
   ],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{js,ts}']
+  }
 });

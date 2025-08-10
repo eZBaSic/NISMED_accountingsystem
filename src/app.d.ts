@@ -77,6 +77,10 @@ declare global {
 		admin_officer: string,
 		tax: number,
 	}
+
+	// sorting types
+	type SortField = 'dv_no' | 'name' | 'date' | null;
+	type SortDirection = 'asc' | 'desc';
 }
 
 export {};

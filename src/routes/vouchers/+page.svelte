@@ -14,10 +14,17 @@ $: selectedProjectCode = selectedProject ? selectedProject.code : '';
 // Editable voucher rows
 let voucherRows: voucher_entry[] = [];
 
+// Sorting state
+let sortField: 'dv_no' | 'name' | 'date' | null = null;
+let sortDirection: 'asc' | 'desc' = 'asc';
+
 // When selectedProjectId changes, update all voucherRows' project_id to selectedProjectCode
 $: if (voucherRows.length && selectedProjectCode) {
   voucherRows = voucherRows.map(row => ({ ...row, project_id: selectedProjectCode }));
 }
+
+// Computed sorted voucher rows
+$: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 
   // Helper for today's date
   function today() {
@@ -26,6 +33,62 @@ $: if (voucherRows.length && selectedProjectCode) {
 
   function this_year() {
     return new Date().getFullYear().toString().slice(-2)
+  }
+
+  // Sorting functions
+  function sortVoucherRows(rows: voucher_entry[], field: 'dv_no' | 'name' | 'date' | null, direction: 'asc' | 'desc'): voucher_entry[] {
+    if (!field) return rows;
+    
+    return [...rows].sort((a, b) => {
+      let valueA: string | number;
+      let valueB: string | number;
+      
+      switch (field) {
+        case 'dv_no':
+          valueA = a.dv_no.toLowerCase();
+          valueB = b.dv_no.toLowerCase();
+          break;
+        case 'name':
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
+          break;
+        case 'date':
+          valueA = new Date(a.date).getTime();
+          valueB = new Date(b.date).getTime();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+      if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function handleSort(field: 'dv_no' | 'name' | 'date') {
+    if (sortField === field) {
+      // Toggle direction if same field
+      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Set new field and default to ascending
+      sortField = field;
+      sortDirection = 'asc';
+    }
+  }
+
+  function getSortIcon(field: 'dv_no' | 'name' | 'date'): string {
+    if (sortField !== field) return '↕️';
+    return sortDirection === 'asc' ? '↑' : '↓';
+  }
+
+  // Helper function to get original index from sorted array
+  function getOriginalIndex(row: voucher_entry): number {
+    return voucherRows.findIndex(originalRow => 
+      originalRow.dv_no === row.dv_no && 
+      originalRow.name === row.name && 
+      originalRow.date === row.date
+    );
   }
 
   // Load projects for dropdown
@@ -59,39 +122,111 @@ $: if (voucherRows.length && selectedProjectCode) {
 
   // Save a single voucher row
   async function saveVoucherRow(row: voucher_entry, idx: number) {
-    // Only send the correct fields
-    const { name, address, ...voucherData } = row;
     try {
-      const { data, error } = await supabase.from('payees').upsert({
-        name: row.name,
-        address: row.address,
-      })
-      // const { error } = await supabase.from('vouchers').insert(voucherData);
-      if (error) throw error;
-      alert('Voucher saved!');
+      // First, upsert the payee
+      const { data: payeeData, error: payeeError } = await supabase
+        .from('payees')
+        .upsert({
+          name: row.name,
+          address: row.address,
+        })
+        .select('id')
+        .single();
+      
+      if (payeeError) throw payeeError;
+
+      // Get the project ID from the selected project
+      const projectId = selectedProjectId;
+      
+      // Prepare voucher data
+      const voucherData = {
+        dv_no: row.dv_no,
+        payee_id: payeeData.id,
+        project_id: projectId,
+        date: row.date,
+        nth_yearly_voucher: 1, // This should be calculated based on existing vouchers
+        gross: row.gross,
+        has_tax_deduction: row.tax,
+        particulars: row.particulars,
+        payment_mode: row.payment_mode,
+        remarks: row.remarks
+      };
+
+      const { error: voucherError } = await supabase
+        .from('vouchers')
+        .insert(voucherData);
+      
+      if (voucherError) throw voucherError;
+      alert('Voucher saved successfully!');
+      
+      // Remove the saved row from the table
+      voucherRows = voucherRows.filter((_, i) => i !== idx);
     } catch (e) {
-      alert('Error saving voucher');
+      console.error('Error saving voucher:', e);
+      alert(`Error saving voucher: ${e.message}`);
     }
   }
 
   // Save all voucher rows
   async function saveAllVouchers() {
     try {
-      const rows = voucherRows.map(({ name, address, ...voucherData }) => voucherData);
-      const { error } = await supabase.from('vouchers').insert(rows);
-      if (error) throw error;
-      alert('All vouchers saved!');
+      for (let i = 0; i < voucherRows.length; i++) {
+        const row = voucherRows[i];
+        
+        // First, upsert the payee
+        const { data: payeeData, error: payeeError } = await supabase
+          .from('payees')
+          .upsert({
+            name: row.name,
+            address: row.address,
+          })
+          .select('id')
+          .single();
+        
+        if (payeeError) throw payeeError;
+
+        // Get the project ID from the selected project
+        const projectId = selectedProjectId;
+        
+        // Prepare voucher data
+        const voucherData = {
+          dv_no: row.dv_no,
+          payee_id: payeeData.id,
+          project_id: projectId,
+          date: row.date,
+          nth_yearly_voucher: i + 1, // This should be calculated based on existing vouchers
+          gross: row.gross,
+          has_tax_deduction: row.tax,
+          particulars: row.particulars,
+          payment_mode: row.payment_mode,
+          remarks: row.remarks
+        };
+
+        const { error: voucherError } = await supabase
+          .from('vouchers')
+          .insert(voucherData);
+        
+        if (voucherError) throw voucherError;
+      }
+      
+      alert('All vouchers saved successfully!');
       voucherRows = [];
     } catch (e) {
-      alert('Error saving vouchers');
+      console.error('Error saving vouchers:', e);
+      alert(`Error saving vouchers: ${e.message}`);
     }
   }
 
   // Update a field in a row
-  function updateRow(idx: number, key: string, value: any) {
-    voucherRows = voucherRows.map((row, i) =>
-      i === idx ? { ...row, [key]: value } : row
-    );
+  function updateRow(sortedIdx: number, key: string, value: any) {
+    const row = sortedVoucherRows[sortedIdx];
+    const originalIdx = getOriginalIndex(row);
+    
+    if (originalIdx !== -1) {
+      voucherRows = voucherRows.map((row, i) =>
+        i === originalIdx ? { ...row, [key]: value } : row
+      );
+    }
   }
 
   // Delete a row from the table
@@ -115,17 +250,37 @@ $: if (voucherRows.length && selectedProjectCode) {
     </select>
 
     <span class="text-gray-600/70">|</span>
+    
+    {#if sortField}
+      <button class="sort-reset-btn" on:click={() => { sortField = null; sortDirection = 'asc'; }}>
+        Clear Sort
+      </button>
+      <span class="text-gray-600/70">|</span>
+    {/if}
+    
     <button class="save-all-btn bg-blue-500 hover:bg-blue-700" on:click={saveAllVouchers}>Save All</button>
   </div>
 </div>
 
+{#if voucherRows.length > 1}
+  <div class="sort-instructions">
+    💡 <strong>Tip:</strong> Click on column headers (DV No., Name, Date) to sort the table
+  </div>
+{/if}
+
 <table class="voucher-table border-2 border-green-800">
   <thead>
     <tr>
-      <th>DV No.</th>
-      <th>Name</th>
+      <th class="sortable" on:click={() => handleSort('dv_no')} title="Click to sort by DV Number">
+        DV No. <span class="sort-icon">{getSortIcon('dv_no')}</span>
+      </th>
+      <th class="sortable" on:click={() => handleSort('name')} title="Click to sort by Name">
+        Name <span class="sort-icon">{getSortIcon('name')}</span>
+      </th>
       <th>Address</th>
-      <th>Date</th>
+      <th class="sortable" on:click={() => handleSort('date')} title="Click to sort by Date">
+        Date <span class="sort-icon">{getSortIcon('date')}</span>
+      </th>
       <th>Gross (PHP)</th>
       <th>Tax</th>
       <th>Particulars</th>
@@ -135,14 +290,14 @@ $: if (voucherRows.length && selectedProjectCode) {
     </tr>
   </thead>
   <tbody>
-    {#each voucherRows as row, idx}
+    {#each sortedVoucherRows as row, idx}
       <tr>
         <td><input type="text" value={row.dv_no} on:input={e => updateRow(idx, 'dv_no', e.target.value)} /></td>
         <td><input type="text" value={row.name} on:input={e => updateRow(idx, 'name', e.target.value)} /></td>
         <td><input type="text" value={row.address} on:input={e => updateRow(idx, 'address', e.target.value)} /></td>
         <td><input type="date" value={row.date} on:input={e => updateRow(idx, 'date', e.target.value)} /></td>
         <td><input type="number" min="0" step="500" value={row.gross} on:input={e => updateRow(idx, 'gross', +e.target.value)} /></td>
-        <td><input type="checkbox" checked={row.has_tax_deduction} on:change={e => updateRow(idx, 'has_tax_deduction', e.target.checked)} /></td>
+        <td><input type="checkbox" checked={row.tax} on:change={e => updateRow(idx, 'tax', e.target.checked)} /></td>
         <td><input type="text" value={row.particulars} on:input={e => updateRow(idx, 'particulars', e.target.value)} /></td>
         <td>
           <select value={row.payment_mode} on:change={e => updateRow(idx, 'payment_mode', e.target.value)} class="mode-select">
@@ -154,8 +309,8 @@ $: if (voucherRows.length && selectedProjectCode) {
         </td>
         <td><input type="text" value={row.remarks} on:input={e => updateRow(idx, 'remarks', e.target.value)} /></td>
         <td class="space-x-1">
-          <button class="text-blue-500 hover:underline" on:click={() => saveVoucherRow(row, idx)}>Save</button>
-          <button class="text-red-500 hover:underline" on:click={() => deleteRow(idx)}>Delete</button>
+          <button class="text-blue-500 hover:underline" on:click={() => saveVoucherRow(row, getOriginalIndex(row))}>Save</button>
+          <button class="text-red-500 hover:underline" on:click={() => deleteRow(getOriginalIndex(row))}>Delete</button>
         </td>
       </tr>
     {/each}
@@ -219,7 +374,7 @@ $: if (voucherRows.length && selectedProjectCode) {
   width: 100%;
 }
 
-.add-row-btn, .save-btn {
+.add-row-btn {
   background: oklch(49.213% 0.13198 151.157); /* dark green */
   color: #fff;
   font-size: 0.95rem;
@@ -251,29 +406,42 @@ $: if (voucherRows.length && selectedProjectCode) {
   justify-content: center;
 }
 
-
-.add-row-btn:hover, .save-btn:hover {
-  background: oklch(43.25% 0.12662 147.579);
-}
-
-.delete-btn {
-  background: #e11d48;
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0.7rem 1.1rem;
+.sort-reset-btn {
+  background: oklch(0.7 0.05 25); /* neutral gray */
+  color: #333;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 0.4rem;
+  border-radius: 0.3rem;
   cursor: pointer;
-  margin-left: 0.4rem;
   transition: background 0.15s;
   height: 2.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.delete-btn:hover {
-  background: #be123c;
+.sort-reset-btn:hover {
+  background: oklch(0.65 0.05 25);
+}
+
+.sort-instructions {
+  background: oklch(96% 0.02 151.328); /* very light green */
+  border: 1px solid oklch(44.8% 0.119 151.328);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: oklch(30% 0.08 151.328);
+}
+
+.sort-instructions strong {
+  color: oklch(44.8% 0.119 151.328);
+}
+
+
+.add-row-btn:hover {
+  background: oklch(43.25% 0.12662 147.579);
 }
 
 .voucher-table {
@@ -339,6 +507,35 @@ $: if (voucherRows.length && selectedProjectCode) {
   text-align: left;
 }
 
+.voucher-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background-color 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.voucher-table th.sortable:hover {
+  background: oklch(34.389% 0.09873 148.331); /* darker green on hover */
+  border-bottom: 2px solid oklch(60% 0.15 151.328); /* highlight border */
+}
+
+.voucher-table th.sortable:active {
+  background: oklch(30% 0.08 148.331); /* even darker when clicked */
+}
+
+.sort-icon {
+  margin-left: 0.25rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.voucher-table th.sortable:hover .sort-icon {
+  opacity: 1;
+  font-weight: bold;
+}
+
 .voucher-table td {
   background: #fff;
   color: #111;
@@ -376,10 +573,6 @@ $: if (voucherRows.length && selectedProjectCode) {
   .page-title {
     font-size: 1.1rem;
   }
-}
-
-.save-btn, .delete-btn {
-  width: 50px;
 }
 
 </style>
