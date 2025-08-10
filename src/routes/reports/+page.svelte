@@ -33,6 +33,19 @@
   let sortField: 'dv_no' | 'payee_name' | 'date' | null = null;
   let sortDirection: 'asc' | 'desc' = 'asc';
 
+  // Edit modal state
+  let showEditModal = false;
+  let editingVoucher: VoucherWithDetails | null = null;
+  let editForm = {
+    dv_no: '',
+    date: '',
+    gross: 0,
+    has_tax_deduction: false,
+    particulars: '',
+    payment_mode: '',
+    remarks: ''
+  };
+
   // Computed sorted vouchers
   $: sortedVouchers = sortVouchers(vouchers, sortField, sortDirection);
 
@@ -169,6 +182,69 @@
     } catch (error) {
       console.error('Error deleting voucher:', error);
       alert('Error deleting voucher. Please try again.');
+    }
+  }
+
+  // Edit Voucher Functions
+  function openEditModal(voucher: VoucherWithDetails) {
+    editingVoucher = voucher;
+    editForm = {
+      dv_no: voucher.dv_no,
+      date: voucher.date,
+      gross: voucher.gross,
+      has_tax_deduction: voucher.has_tax_deduction,
+      particulars: voucher.particulars,
+      payment_mode: voucher.payment_mode,
+      remarks: voucher.remarks
+    };
+    showEditModal = true;
+  }
+
+  function closeEditModal() {
+    showEditModal = false;
+    editingVoucher = null;
+    editForm = {
+      dv_no: '',
+      date: '',
+      gross: 0,
+      has_tax_deduction: false,
+      particulars: '',
+      payment_mode: '',
+      remarks: ''
+    };
+  }
+
+  async function saveVoucherEdit() {
+    if (!editingVoucher) return;
+
+    try {
+      const { error } = await supabase
+        .from('vouchers')
+        .update({
+          dv_no: editForm.dv_no,
+          date: editForm.date,
+          gross: editForm.gross,
+          has_tax_deduction: editForm.has_tax_deduction,
+          particulars: editForm.particulars,
+          payment_mode: editForm.payment_mode,
+          remarks: editForm.remarks
+        })
+        .eq('id', editingVoucher.id);
+
+      if (error) throw error;
+
+      // Update local state
+      vouchers = vouchers.map(v => 
+        v.id === editingVoucher!.id 
+          ? { ...v, ...editForm }
+          : v
+      );
+
+      closeEditModal();
+      alert('Voucher updated successfully!');
+    } catch (error) {
+      console.error('Error updating voucher:', error);
+      alert('Error updating voucher. Please try again.');
     }
   }
 
@@ -345,6 +421,9 @@
               <button class="pdf-button pdf-single" on:click={() => generateSingleVoucherPDF(voucher)} title="Generate PDF for this voucher">
                 📄 PDF
               </button>
+              <button class="edit-button" on:click={() => openEditModal(voucher)} title="Edit this voucher">
+                ✏️ Edit
+              </button>
               <button class="delete-button delete-single" on:click={() => deleteVoucher(voucher)} title="Delete this voucher">
                 🗑️ Delete
               </button>
@@ -357,6 +436,96 @@
 {:else}
   <div class="no-selection">
     <p>Please select a project to view its vouchers.</p>
+  </div>
+{/if}
+
+<!-- Edit Modal -->
+{#if showEditModal && editingVoucher}
+  <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" on:click={closeEditModal} on:keydown={(e) => e.key === 'Escape' && closeEditModal()}>
+    <div class="modal-content" role="document" on:click|stopPropagation on:keydown|stopPropagation>
+      <h2 id="edit-modal-title">Edit Voucher</h2>
+      <form on:submit|preventDefault={saveVoucherEdit}>
+        <div class="form-group">
+          <label for="edit-dv-no">DV Number:</label>
+          <input 
+            id="edit-dv-no"
+            type="text" 
+            bind:value={editForm.dv_no}
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-date">Date:</label>
+          <input 
+            id="edit-date"
+            type="date" 
+            bind:value={editForm.date}
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-gross">Gross Amount:</label>
+          <input 
+            id="edit-gross"
+            type="number" 
+            step="0.01"
+            bind:value={editForm.gross}
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-tax-deduction">
+            <input 
+              id="edit-tax-deduction"
+              type="checkbox" 
+              bind:checked={editForm.has_tax_deduction}
+            />
+            Has Tax Deduction
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-particulars">Particulars:</label>
+          <textarea 
+            id="edit-particulars"
+            bind:value={editForm.particulars}
+            rows="3"
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-payment-mode">Payment Mode:</label>
+          <input 
+            id="edit-payment-mode"
+            type="text" 
+            bind:value={editForm.payment_mode}
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-remarks">Remarks:</label>
+          <textarea 
+            id="edit-remarks"
+            bind:value={editForm.remarks}
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="modal-buttons">
+          <button type="button" class="cancel-button" on:click={closeEditModal}>
+            Cancel
+          </button>
+          <button type="submit" class="save-button">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 {/if}
 
@@ -627,5 +796,130 @@
 .delete-single:hover {
   background: #dc2626;
   transform: translateY(-1px);
+}
+
+/* Edit Button Styles */
+.edit-button {
+  background: #3b82f6;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.edit-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+  margin: 0 0 1.5rem 0;
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.cancel-button,
+.save-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-button {
+  background: #6b7280;
+  color: white;
+}
+
+.cancel-button:hover {
+  background: #4b5563;
+}
+
+.save-button {
+  background: #059669;
+  color: white;
+}
+
+.save-button:hover {
+  background: #047857;
 }
 </style>

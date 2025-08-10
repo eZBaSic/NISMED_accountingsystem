@@ -13,6 +13,7 @@
           <img src="/nismed.png" alt="NISMED Logo" class="h-13 w-13 rounded-md bg-white p-1 shadow" />
         </a>
         {#each [
+          {href: "/dashboard", title: "Dashboard"},
           {href: "/vouchers", title: "Vouchers"},
           {href: "/projects", title: "Projects"},
           {href: "/reports", title: "Reports"}, 
