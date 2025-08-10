@@ -161,9 +161,9 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
       
       // Remove the saved row from the table
       voucherRows = voucherRows.filter((_, i) => i !== idx);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error saving voucher:', e);
-      alert(`Error saving voucher: ${e.message}`);
+      alert(`Error saving voucher: ${e?.message || 'Unknown error'}`);
     }
   }
 
@@ -211,9 +211,9 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
       
       alert('All vouchers saved successfully!');
       voucherRows = [];
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error saving vouchers:', e);
-      alert(`Error saving vouchers: ${e.message}`);
+      alert(`Error saving vouchers: ${e?.message || 'Unknown error'}`);
     }
   }
 
@@ -292,22 +292,22 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
   <tbody>
     {#each sortedVoucherRows as row, idx}
       <tr>
-        <td><input type="text" value={row.dv_no} on:input={e => updateRow(idx, 'dv_no', e.target.value)} /></td>
-        <td><input type="text" value={row.name} on:input={e => updateRow(idx, 'name', e.target.value)} /></td>
-        <td><input type="text" value={row.address} on:input={e => updateRow(idx, 'address', e.target.value)} /></td>
-        <td><input type="date" value={row.date} on:input={e => updateRow(idx, 'date', e.target.value)} /></td>
-        <td><input type="number" min="0" step="500" value={row.gross} on:input={e => updateRow(idx, 'gross', +e.target.value)} /></td>
-        <td><input type="checkbox" checked={row.tax} on:change={e => updateRow(idx, 'tax', e.target.checked)} /></td>
-        <td><input type="text" value={row.particulars} on:input={e => updateRow(idx, 'particulars', e.target.value)} /></td>
+        <td><input type="text" value={row.dv_no} on:input={e => updateRow(idx, 'dv_no', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="text" value={row.name} on:input={e => updateRow(idx, 'name', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="text" value={row.address} on:input={e => updateRow(idx, 'address', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="date" value={row.date} on:input={e => updateRow(idx, 'date', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="number" min="0" step="500" value={row.gross} on:input={e => updateRow(idx, 'gross', +(e.target as HTMLInputElement).value)} /></td>
+        <td><input type="checkbox" checked={row.tax} on:change={e => updateRow(idx, 'tax', (e.target as HTMLInputElement).checked)} /></td>
+        <td><input type="text" value={row.particulars} on:input={e => updateRow(idx, 'particulars', (e.target as HTMLInputElement).value)} /></td>
         <td>
-          <select value={row.payment_mode} on:change={e => updateRow(idx, 'payment_mode', e.target.value)} class="mode-select">
+          <select value={row.payment_mode} on:change={e => updateRow(idx, 'payment_mode', (e.target as HTMLSelectElement).value)} class="mode-select">
             <option value="">Select</option>
             <option value="Cash">Cash</option>
             <option value="Online Payment">Online Payment</option>
             <option value="Bank Transfer">Bank Transfer</option>
           </select>
         </td>
-        <td><input type="text" value={row.remarks} on:input={e => updateRow(idx, 'remarks', e.target.value)} /></td>
+        <td><input type="text" value={row.remarks} on:input={e => updateRow(idx, 'remarks', (e.target as HTMLInputElement).value)} /></td>
         <td class="space-x-1">
           <button class="text-blue-500 hover:underline" on:click={() => saveVoucherRow(row, getOriginalIndex(row))}>Save</button>
           <button class="text-red-500 hover:underline" on:click={() => deleteRow(getOriginalIndex(row))}>Delete</button>

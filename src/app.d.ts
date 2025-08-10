@@ -59,7 +59,7 @@ declare global {
 		date: string,
 		gross: number,
 		tax: boolean,
-		particulars: number,
+		particulars: string,
 		payment_mode: string,
 		remarks: string,
 	}
