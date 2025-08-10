@@ -146,6 +146,32 @@
     }
   }
 
+  // Delete Voucher Functions
+  async function deleteVoucher(voucher: VoucherWithDetails) {
+    const confirmMessage = `Are you sure you want to delete voucher ${voucher.dv_no} for ${voucher.payee_name}?\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('vouchers')
+        .delete()
+        .eq('id', voucher.id);
+
+      if (error) throw error;
+
+      // Remove from local state
+      vouchers = vouchers.filter(v => v.id !== voucher.id);
+      
+      alert(`Voucher ${voucher.dv_no} has been successfully deleted.`);
+    } catch (error) {
+      console.error('Error deleting voucher:', error);
+      alert('Error deleting voucher. Please try again.');
+    }
+  }
+
   // Load projects
   async function load_projects() {
     try {
@@ -271,16 +297,10 @@
       <p>No vouchers found for this project.</p>
     </div>
   {:else}
-    <div class="instruction-text">
-      <p>📋 <strong>Tip:</strong> Click on column headers (DV No., Payee Name, Date) to sort the vouchers.</p>
-    </div>
     
-    <div class="pdf-controls">
-      <button class="pdf-button pdf-all" on:click={generateAllVouchersPDF}>
-        📄 Generate All Vouchers PDF
-      </button>
-      <p class="pdf-hint">or click "PDF" next to individual vouchers below</p>
-    </div>
+    <button class="pdf-button pdf-all" on:click={generateAllVouchersPDF}>
+      📄 Generate All Vouchers PDF
+    </button>
     
     <table class="voucher-table border-2 border-green-800">
       <thead>
@@ -324,6 +344,9 @@
             <td class="actions">
               <button class="pdf-button pdf-single" on:click={() => generateSingleVoucherPDF(voucher)} title="Generate PDF for this voucher">
                 📄 PDF
+              </button>
+              <button class="delete-button delete-single" on:click={() => deleteVoucher(voucher)} title="Delete this voucher">
+                🗑️ Delete
               </button>
             </td>
           </tr>
@@ -466,24 +489,6 @@
   opacity: 0.8;
 }
 
-.instruction-text {
-  background: #f0f9ff;
-  border: 1px solid #0ea5e9;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  color: #0c4a6e;
-  font-size: 0.875rem;
-}
-
-.instruction-text p {
-  margin: 0;
-}
-
-.instruction-text strong {
-  font-weight: 600;
-}
-
 .voucher-table td {
   background: #fff;
   color: #111;
@@ -542,17 +547,6 @@
 }
 
 /* PDF Generation Styles */
-.pdf-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e5e5;
-}
-
 .pdf-button {
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
@@ -564,6 +558,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .pdf-all {
@@ -591,20 +586,46 @@
   transform: translateY(-1px);
 }
 
-.pdf-hint {
-  color: #6b7280;
-  font-size: 0.875rem;
-  margin: 0;
-  font-style: italic;
-}
-
 .actions {
   text-align: center;
-  width: 80px;
+  width: 140px;
 }
 
-.actions .pdf-button {
+.actions .pdf-button,
+.actions .delete-button {
   width: 100%;
   justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.actions .pdf-button:last-child,
+.actions .delete-button:last-child {
+  margin-bottom: 0;
+}
+
+/* Delete Button Styles */
+.delete-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.delete-single {
+  background: #ef4444;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.delete-single:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
 }
 </style>
