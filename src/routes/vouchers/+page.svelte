@@ -4,8 +4,8 @@
 
 
   // Project selection
-  let projects: { id: string, code: string, title: string }[] = [];
-  let selectedProjectId: string = '';
+  let projects: { id: number, code: string, title: string }[] = [];
+  let selectedProjectId: number = 0;
 
 // Derived selected project and code
 $: selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -17,6 +17,10 @@ let voucherRows: voucher_entry[] = [];
 // Sorting state
 let sortField: 'dv_no' | 'name' | 'date' | null = null;
 let sortDirection: 'asc' | 'desc' = 'asc';
+
+// Loading states for save operations
+let savingRow: boolean = false;
+let savingAll: boolean = false;
 
 // When selectedProjectId changes, update all voucherRows' project_id to selectedProjectCode
 $: if (voucherRows.length && selectedProjectCode) {
@@ -122,21 +126,42 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 
   // Save a single voucher row
   async function saveVoucherRow(row: voucher_entry, idx: number) {
+    if (savingRow) return; // Prevent multiple simultaneous saves
+    savingRow = true;
+    
     try {
+      // Validate required fields
+      if (!row.dv_no || !row.name || !row.date || !selectedProjectId || selectedProjectId === 0) {
+        alert('Please fill in all required fields (DV No, Name, Date) and select a project.');
+        return;
+      }
+
       // First, upsert the payee
       const { data: payeeData, error: payeeError } = await supabase
         .from('payees')
         .upsert({
           name: row.name,
-          address: row.address,
+          address: row.address || '',
         })
         .select('id')
         .single();
       
       if (payeeError) throw payeeError;
 
-      // Get the project ID from the selected project
+      // Get the project ID (already a number)
       const projectId = selectedProjectId;
+      
+      // Calculate nth_yearly_voucher by counting existing vouchers for this year and project
+      const currentYear = new Date(row.date).getFullYear();
+      const { count, error: countError } = await supabase
+        .from('vouchers')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .gte('date', `${currentYear}-01-01`)
+        .lte('date', `${currentYear}-12-31`);
+      
+      if (countError) throw countError;
+      const nthVoucher = (count || 0) + 1;
       
       // Prepare voucher data
       const voucherData = {
@@ -144,12 +169,12 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
         payee_id: payeeData.id,
         project_id: projectId,
         date: row.date,
-        nth_yearly_voucher: 1, // This should be calculated based on existing vouchers
+        nth_yearly_voucher: nthVoucher,
         gross: row.gross,
         has_tax_deduction: row.tax,
         particulars: row.particulars,
         payment_mode: row.payment_mode,
-        remarks: row.remarks
+        remarks: row.remarks || null
       };
 
       const { error: voucherError } = await supabase
@@ -164,29 +189,67 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
     } catch (e: any) {
       console.error('Error saving voucher:', e);
       alert(`Error saving voucher: ${e?.message || 'Unknown error'}`);
+    } finally {
+      savingRow = false;
     }
   }
 
   // Save all voucher rows
   async function saveAllVouchers() {
+    if (savingAll) return; // Prevent multiple simultaneous saves
+    savingAll = true;
+    
     try {
+      // Validate that we have vouchers to save and a project selected
+      if (voucherRows.length === 0) {
+        alert('No vouchers to save.');
+        return;
+      }
+      
+      if (!selectedProjectId || selectedProjectId === 0) {
+        alert('Please select a project before saving vouchers.');
+        return;
+      }
+
+      // Validate all rows have required fields
+      for (let i = 0; i < voucherRows.length; i++) {
+        const row = voucherRows[i];
+        if (!row.dv_no || !row.name || !row.date) {
+          alert(`Row ${i + 1}: Please fill in all required fields (DV No, Name, Date).`);
+          return;
+        }
+      }
+
+      const projectId = selectedProjectId;
+      
+      // Get current year's voucher count for proper nth_yearly_voucher calculation
+      const currentYear = new Date().getFullYear();
+      const { count: existingCount, error: countError } = await supabase
+        .from('vouchers')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .gte('date', `${currentYear}-01-01`)
+        .lte('date', `${currentYear}-12-31`);
+      
+      if (countError) throw countError;
+      let voucherCounter = (existingCount || 0);
+
       for (let i = 0; i < voucherRows.length; i++) {
         const row = voucherRows[i];
         
-        // First, upsert the payee
+        // Upsert the payee
         const { data: payeeData, error: payeeError } = await supabase
           .from('payees')
           .upsert({
             name: row.name,
-            address: row.address,
+            address: row.address || '',
           })
           .select('id')
           .single();
         
         if (payeeError) throw payeeError;
 
-        // Get the project ID from the selected project
-        const projectId = selectedProjectId;
+        voucherCounter++;
         
         // Prepare voucher data
         const voucherData = {
@@ -194,12 +257,12 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
           payee_id: payeeData.id,
           project_id: projectId,
           date: row.date,
-          nth_yearly_voucher: i + 1, // This should be calculated based on existing vouchers
+          nth_yearly_voucher: voucherCounter,
           gross: row.gross,
           has_tax_deduction: row.tax,
           particulars: row.particulars,
           payment_mode: row.payment_mode,
-          remarks: row.remarks
+          remarks: row.remarks || null
         };
 
         const { error: voucherError } = await supabase
@@ -209,11 +272,13 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
         if (voucherError) throw voucherError;
       }
       
-      alert('All vouchers saved successfully!');
+      alert(`All ${voucherRows.length} vouchers saved successfully!`);
       voucherRows = [];
     } catch (e: any) {
       console.error('Error saving vouchers:', e);
       alert(`Error saving vouchers: ${e?.message || 'Unknown error'}`);
+    } finally {
+      savingAll = false;
     }
   }
 
@@ -258,7 +323,13 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
       <span class="text-gray-600/70">|</span>
     {/if}
     
-    <button class="save-all-btn bg-blue-500 hover:bg-blue-700" on:click={saveAllVouchers}>Save All</button>
+    <button 
+      class="save-all-btn bg-blue-500 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
+      on:click={saveAllVouchers}
+      disabled={savingAll || voucherRows.length === 0}
+    >
+      {savingAll ? 'Saving All...' : `Save All (${voucherRows.length})`}
+    </button>
   </div>
 </div>
 
@@ -309,7 +380,13 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
         </td>
         <td><input type="text" value={row.remarks} on:input={e => updateRow(idx, 'remarks', (e.target as HTMLInputElement).value)} /></td>
         <td class="space-x-1">
-          <button class="text-blue-500 hover:underline" on:click={() => saveVoucherRow(row, getOriginalIndex(row))}>Save</button>
+          <button 
+            class="text-blue-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed" 
+            on:click={() => saveVoucherRow(row, getOriginalIndex(row))}
+            disabled={savingRow}
+          >
+            {savingRow ? 'Saving...' : 'Save'}
+          </button>
           <button class="text-red-500 hover:underline" on:click={() => deleteRow(getOriginalIndex(row))}>Delete</button>
         </td>
       </tr>
