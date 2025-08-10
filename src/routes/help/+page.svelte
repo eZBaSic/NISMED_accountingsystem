@@ -5,21 +5,18 @@
   let markdownContent = `
 # NISMED Accounting System - User Guide
 
-Welcome to the NISMED Accounting System! This guide will help you navigate and use the system effectively.
+Welcome to the NISMED Accounting System!
 
 ## 🏠 Dashboard
-The **Dashboard** is your main hub where you can:
-- View system statistics (total projects, vouchers, and financial summaries)
-- Quick navigation to all major sections
-- Export data as CSV files (projects and vouchers)
+The **Dashboard** is the landing page where you can do the folloing:
+- View summaries of the vouchers and projects
+- Navigate to other pages
+- Export data as CSV files
 
 ## 📋 Vouchers
 The **Vouchers** section allows you to:
 - **Add new vouchers** by filling out the form and clicking "Add Row"
-- **Edit vouchers** by clicking directly on table cells
-- **Sort vouchers** by clicking on column headers (DV No., Name, Date)
-- **Save individual vouchers** using the "Save" button in each row
-- **Save all vouchers** at once using the "Save All" button
+
 - **Delete vouchers** using the "Delete" button in each row
 - **Select projects** from the dropdown to associate vouchers with specific projects
 

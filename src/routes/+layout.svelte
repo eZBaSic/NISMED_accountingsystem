@@ -44,14 +44,13 @@
             <a href={href} class={`hover:text-green-200 ${`hover:bg-green-800`} px-5 py-3 transition-colors font-semibold rounded-full ${page.url.pathname.startsWith(href) ? `bg-green-800` : ''}`}>{title}</a>
         {/each}
       </div>
-      <!-- Right: User email, Help, and Logout -->
+      <!-- Right: User email and Logout -->
       <div class="flex items-center gap-4">
         {#if currentUser}
           <span class="text-green-200 text-sm">
             {currentUser.email}
           </span>
         {/if}
-        <a href="/help" class="hover:bg-green-900 px-4 py-2 rounded font-semibold transition-colors">Help</a>
         <a href="/logout" class="hover:bg-green-900 px-4 py-2 rounded font-semibold transition-colors">Logout</a>
       </div>
     </div>  
