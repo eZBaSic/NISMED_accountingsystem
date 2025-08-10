@@ -81,6 +81,22 @@ declare global {
 	// sorting types
 	type SortField = 'dv_no' | 'name' | 'date' | null;
 	type SortDirection = 'asc' | 'desc';
+
+	// authentication types
+	interface User {
+		id: string;
+		email: string;
+		user_metadata?: {
+			full_name?: string;
+		};
+	}
+
+	interface AuthSession {
+		user: User;
+		access_token: string;
+		refresh_token: string;
+		expires_at: number;
+	}
 }
 
 export {};
