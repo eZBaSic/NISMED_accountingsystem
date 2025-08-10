@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from "$lib/supabaseClient";
+  import { generateVoucherPDF, generateMultipleVouchersPDF, type VoucherPDFData } from "$lib/pdfGenerator";
 
-  // Project selection
-  let projects: { id: number, code: string, title: string }[] = [];
+  // Project selection - expanded to include all fields needed for PDF
+  let projects: { id: number, code: string, title: string, authorized_rep: string, approver: string }[] = [];
   let selectedProjectId: number = 0;
 
   // Derived selected project and code
@@ -28,12 +29,129 @@
   let vouchers: VoucherWithDetails[] = [];
   let loading: boolean = false;
 
+  // Sorting state
+  let sortField: 'dv_no' | 'payee_name' | 'date' | null = null;
+  let sortDirection: 'asc' | 'desc' = 'asc';
+
+  // Computed sorted vouchers
+  $: sortedVouchers = sortVouchers(vouchers, sortField, sortDirection);
+
+  // Sorting function
+  function sortVouchers(rows: VoucherWithDetails[], field: 'dv_no' | 'payee_name' | 'date' | null, direction: 'asc' | 'desc'): VoucherWithDetails[] {
+    if (!field) return rows;
+    
+    return [...rows].sort((a, b) => {
+      let valueA: string | number;
+      let valueB: string | number;
+      
+      switch (field) {
+        case 'dv_no':
+          valueA = a.dv_no.toLowerCase();
+          valueB = b.dv_no.toLowerCase();
+          break;
+        case 'payee_name':
+          valueA = a.payee_name.toLowerCase();
+          valueB = b.payee_name.toLowerCase();
+          break;
+        case 'date':
+          valueA = new Date(a.date).getTime();
+          valueB = new Date(b.date).getTime();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+      if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Handle sort click
+  function handleSort(field: 'dv_no' | 'payee_name' | 'date') {
+    if (sortField === field) {
+      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortField = field;
+      sortDirection = 'asc';
+    }
+  }
+
+  // Get sort icon for column header
+  function getSortIcon(field: 'dv_no' | 'payee_name' | 'date'): string {
+    if (sortField !== field) return '↕️';
+    return sortDirection === 'asc' ? '↑' : '↓';
+  }
+
+  // PDF Generation Functions
+  async function generateSingleVoucherPDF(voucher: VoucherWithDetails) {
+    if (!selectedProject) {
+      alert('Please select a project first');
+      return;
+    }
+
+    try {
+      const voucherPDFData: VoucherPDFData = {
+        id: voucher.id,
+        dv_no: voucher.dv_no,
+        payee_name: voucher.payee_name,
+        payee_address: voucher.payee_address,
+        date: voucher.date,
+        gross: voucher.gross,
+        has_tax_deduction: voucher.has_tax_deduction,
+        particulars: voucher.particulars,
+        payment_mode: voucher.payment_mode,
+        remarks: voucher.remarks,
+        project_code: selectedProject.code,
+        project_title: selectedProject.title,
+        authorized_rep: selectedProject.authorized_rep,
+        approver: selectedProject.approver
+      };
+
+      await generateVoucherPDF(voucherPDFData);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Make sure jsPDF library is loaded.');
+    }
+  }
+
+  async function generateAllVouchersPDF() {
+    if (!selectedProject || sortedVouchers.length === 0) {
+      alert('Please select a project with vouchers first');
+      return;
+    }
+
+    try {
+      const voucherPDFDataList: VoucherPDFData[] = sortedVouchers.map(voucher => ({
+        id: voucher.id,
+        dv_no: voucher.dv_no,
+        payee_name: voucher.payee_name,
+        payee_address: voucher.payee_address,
+        date: voucher.date,
+        gross: voucher.gross,
+        has_tax_deduction: voucher.has_tax_deduction,
+        particulars: voucher.particulars,
+        payment_mode: voucher.payment_mode,
+        remarks: voucher.remarks,
+        project_code: selectedProject.code,
+        project_title: selectedProject.title,
+        authorized_rep: selectedProject.authorized_rep,
+        approver: selectedProject.approver
+      }));
+
+      await generateMultipleVouchersPDF(voucherPDFDataList, selectedProject.title);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Make sure jsPDF library is loaded.');
+    }
+  }
+
   // Load projects
   async function load_projects() {
     try {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, code, title')
+        .select('id, code, title, authorized_rep, approver')
         .order('code');
       
       if (error) throw error;
@@ -136,6 +254,9 @@
         Loading vouchers...
       {:else}
         Showing {vouchers.length} voucher{vouchers.length !== 1 ? 's' : ''}
+        {#if sortField}
+          • Sorted by {sortField === 'dv_no' ? 'DV Number' : sortField === 'payee_name' ? 'Payee Name' : 'Date'} ({sortDirection === 'asc' ? 'ascending' : 'descending'})
+        {/if}
       {/if}
     </p>
   </div>
@@ -150,23 +271,41 @@
       <p>No vouchers found for this project.</p>
     </div>
   {:else}
+    <div class="instruction-text">
+      <p>📋 <strong>Tip:</strong> Click on column headers (DV No., Payee Name, Date) to sort the vouchers.</p>
+    </div>
+    
+    <div class="pdf-controls">
+      <button class="pdf-button pdf-all" on:click={generateAllVouchersPDF}>
+        📄 Generate All Vouchers PDF
+      </button>
+      <p class="pdf-hint">or click "PDF" next to individual vouchers below</p>
+    </div>
+    
     <table class="voucher-table border-2 border-green-800">
       <thead>
         <tr>
-          <th>DV No.</th>
-          <th>Payee Name</th>
+          <th class="sortable-header" on:click={() => handleSort('dv_no')} title="Click to sort by DV Number">
+            DV No. <span class="sort-icon">{getSortIcon('dv_no')}</span>
+          </th>
+          <th class="sortable-header" on:click={() => handleSort('payee_name')} title="Click to sort by Payee Name">
+            Payee Name <span class="sort-icon">{getSortIcon('payee_name')}</span>
+          </th>
           <th>Address</th>
-          <th>Date</th>
+          <th class="sortable-header" on:click={() => handleSort('date')} title="Click to sort by Date">
+            Date <span class="sort-icon">{getSortIcon('date')}</span>
+          </th>
           <th>Nth Yearly</th>
           <th>Gross Amount</th>
           <th>Tax Deduction</th>
           <th>Particulars</th>
           <th>Payment Mode</th>
           <th>Remarks</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {#each vouchers as voucher}
+        {#each sortedVouchers as voucher}
           <tr>
             <td class="font-medium">{voucher.dv_no}</td>
             <td>{voucher.payee_name}</td>
@@ -182,6 +321,11 @@
             <td class="particulars">{voucher.particulars}</td>
             <td class="payment-mode">{voucher.payment_mode}</td>
             <td class="text-sm text-gray-600">{voucher.remarks}</td>
+            <td class="actions">
+              <button class="pdf-button pdf-single" on:click={() => generateSingleVoucherPDF(voucher)} title="Generate PDF for this voucher">
+                📄 PDF
+              </button>
+            </td>
           </tr>
         {/each}
       </tbody>
@@ -305,6 +449,41 @@
   letter-spacing: 0.025em;
 }
 
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.sortable-header:hover {
+  background: oklch(34.389% 0.09873 148.331) !important;
+}
+
+.sort-icon {
+  margin-left: 0.5rem;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.instruction-text {
+  background: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: #0c4a6e;
+  font-size: 0.875rem;
+}
+
+.instruction-text p {
+  margin: 0;
+}
+
+.instruction-text strong {
+  font-weight: 600;
+}
+
 .voucher-table td {
   background: #fff;
   color: #111;
@@ -360,5 +539,72 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* PDF Generation Styles */
+.pdf-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e5e5;
+}
+
+.pdf-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pdf-all {
+  background: oklch(48.17% 0.1273 151.85);
+  color: white;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+.pdf-all:hover {
+  background: oklch(43.2% 0.1273 151.85);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-single {
+  background: #f59e0b;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.pdf-single:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.pdf-hint {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+  font-style: italic;
+}
+
+.actions {
+  text-align: center;
+  width: 80px;
+}
+
+.actions .pdf-button {
+  width: 100%;
+  justify-content: center;
 }
 </style>

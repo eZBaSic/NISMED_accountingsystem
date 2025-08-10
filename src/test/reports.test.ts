@@ -154,7 +154,7 @@ describe('Reports Functionality Tests', () => {
         particulars: 'Test particulars',
         payment_mode: 'Cash',
         remarks: 'Test remarks',
-        payees: null
+        payees: null as any
       };
 
       const transformed = {
@@ -273,7 +273,7 @@ describe('Reports Functionality Tests', () => {
 
   describe('Project Filtering Logic', () => {
     it('should filter vouchers by project ID correctly', () => {
-      const selectedProjectId = 5;
+      const selectedProjectId: number = 5;
       const shouldLoadVouchers = selectedProjectId && selectedProjectId !== 0;
       
       expect(shouldLoadVouchers).toBe(true);
