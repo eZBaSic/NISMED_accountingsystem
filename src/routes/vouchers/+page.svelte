@@ -568,12 +568,10 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
   user-select: none;
   position: relative;
   transition: background-color 0.2s ease;
-  border-bottom: 2px solid transparent;
 }
 
 .voucher-table th.sortable:hover {
   background: oklch(34.389% 0.09873 148.331); /* darker green on hover */
-  border-bottom: 2px solid oklch(60% 0.15 151.328); /* highlight border */
 }
 
 .voucher-table th.sortable:active {
