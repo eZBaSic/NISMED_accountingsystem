@@ -65,16 +65,16 @@ export const actions = {
 		const formData = await request.formData();
 
 		const userId = formData.get('userId')?.toString();
-
+		
 		if (!userId) {
 			return fail(400, {
 				message: 'Missing user id'
 			});
 		}
-
+		
 		const { error } =
 			await supabaseAdmin.auth.admin.deleteUser(userId);
-
+		
 		if (error) {
 			return fail(400, {
 				message: error.message
