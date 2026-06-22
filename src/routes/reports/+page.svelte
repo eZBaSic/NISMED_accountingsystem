@@ -548,8 +548,8 @@
 }
 
 .project-selector {
-  display: flex;
-  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .project-select {
@@ -559,7 +559,10 @@
   font-size: 1rem;
   background: white;
   color: #111;
-  min-width: 300px;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .project-select:focus {
