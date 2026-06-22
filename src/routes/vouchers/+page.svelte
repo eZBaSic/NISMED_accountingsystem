@@ -97,9 +97,79 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 
   // Load projects for dropdown
   async function load_projects() {
-    const { data, error } = await supabase.from('projects').select('id, code, title');
-    projects = data ?? [];
-    if (projects.length > 0) selectedProjectId = projects[0].id;
+    try {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      if (!user) {
+        projects = [];
+        return;
+      }
+
+      // Get user's role
+      const { data: profile, error: profileError } = 
+        await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      // ADMIN: load all projects
+      if (profile?.role == 'admin') {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, code, title');
+
+        if (error) {
+          throw error;
+        }
+
+        projects = data ?? [];
+
+        if (projects.length > 0) selectedProjectId = projects[0].id;
+
+        return;
+      } else {
+        // USER: Get assigned projects IDs
+        const { data: userProjects, error: userProjectsError } = await supabase
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', user.id);
+
+        if (userProjectsError) {
+          throw userProjectsError;
+        }
+
+        const projectIds = userProjects?.map((p) => p.project_id) ?? [];
+        if (projectIds.length === 0) {
+          projects = [];
+          selectedProjectId = 0;
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, code, title')
+          .in("id", projectIds);
+
+        if (error) {
+          throw error;
+        }
+
+        projects = data ?? [];
+        if (projects.length > 0) {
+          selectedProjectId = projects[0].id;
+        }
+      } 
+    } catch (err) {
+        console.error('Error loading projects:', err);
+        projects = [];
+        selectedProjectId = 0;
+    }
   }
 
   // Add a new empty row
@@ -630,3 +700,4 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 }
 
 </style>
+

@@ -84,7 +84,6 @@
         }
 
         const projectIds = userProjects?.map(up => up.project_id) ?? [];
-        console.log(userProjects);
         if (projectIds.length === 0) {
           return;
         }
