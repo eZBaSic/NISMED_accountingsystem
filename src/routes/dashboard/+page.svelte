@@ -73,86 +73,97 @@
       }
       role = profile?.role ?? 'user';
 
-      // Get projects assigned to user
-      const { data: userProjects, error: userProjectsError } = await supabase
-        .from('user_projects')
-        .select('project_id')
-        .eq('user_id', user.id);
-      if (userProjectsError) {
-        throw userProjectsError;
-      }
+      if (role == 'user') {
+        // Get projects assigned to user
+        const { data: userProjects, error: userProjectsError } = await supabase
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', user.id);
+        if (userProjectsError) {
+          throw userProjectsError;
+        }
 
-      const projectIds = userProjects?.map(up => up.project_id) ?? [];
-      console.log(userProjects);
-      if (projectIds.length === 0) {
-        return;
-      }
-
-      // Load only assigned projects
-      const { data: projects, error: projectsError } =
-			await supabase
-				.from('projects')
-				.select('*')
-				.in('id', projectIds);
-
-      if (projectsError) throw projectsError;
-
-      totalProjects = projects?.length ?? 0;
+        const projectIds = userProjects?.map(up => up.project_id) ?? [];
+        console.log(userProjects);
+        if (projectIds.length === 0) {
+          return;
+        }
       
-
-      // // Load projects count
-      // const { data: projects, error: projectsError } = await supabase
-      //   .from('projects')
-      //   .select('*');
-
-      // if (projectsError) throw projectsError;
-      // totalProjects = projects?.length || 0;
-
-
-      // Load vouchers only for assigned projects
-      const { data: vouchers, error: vouchersError } =
+        // Load only assigned projects
+        const { data: projects, error: projectsError } =
         await supabase
+          .from('projects')
+          .select('*')
+          .in('id', projectIds);
+
+        if (projectsError) throw projectsError;
+
+        totalProjects = projects?.length ?? 0;
+
+        // Load vouchers only for assigned projects
+        const { data: vouchers, error: vouchersError } =
+          await supabase
+            .from('vouchers')
+            .select(`
+              *,
+              payees(name),
+              projects(title, code)
+            `)
+            .in('project_id', projectIds)
+            .order('date', { ascending: false });
+
+        if (vouchersError) throw vouchersError;
+
+        totalVouchers = vouchers?.length ?? 0;
+
+        totalAmount =
+          vouchers?.reduce(
+            (sum, voucher) => sum + (voucher.gross || 0),
+            0
+          ) ?? 0;
+        
+        // Create recent activity from recent vouchers
+        recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
+          type: 'voucher' as const,
+          title: `${voucher.dv_no} - ${voucher.payees?.name}`,
+          date: voucher.date,
+          amount: voucher.gross
+        }));
+      } else {
+        // Admin, show all
+        // Load projects count
+        const { data: projects, error: projectsError } = await supabase
+          .from('projects')
+          .select('*');
+
+        if (projectsError) throw projectsError;
+        totalProjects = projects?.length || 0;
+
+        // Load vouchers data
+        const { data: vouchers, error: vouchersError } = await supabase
           .from('vouchers')
           .select(`
             *,
             payees(name),
             projects(title, code)
           `)
-          .in('project_id', projectIds)
           .order('date', { ascending: false });
 
-      if (vouchersError) throw vouchersError;
+        if (vouchersError) throw vouchersError;
+        
+        totalVouchers = vouchers?.length || 0;
+        totalAmount = vouchers?.reduce((sum, voucher) => sum + (voucher.gross || 0), 0) || 0;
 
-      totalVouchers = vouchers?.length ?? 0;
+        // Create recent activity from recent vouchers
+        recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
+          type: 'voucher' as const,
+          title: `${voucher.dv_no} - ${voucher.payees?.name}`,
+          date: voucher.date,
+          amount: voucher.gross
+        }));
+      }
 
-      totalAmount =
-        vouchers?.reduce(
-          (sum, voucher) => sum + (voucher.gross || 0),
-          0
-        ) ?? 0;
-
-      // Load vouchers data
-      // const { data: vouchers, error: vouchersError } = await supabase
-      //   .from('vouchers')
-      //   .select(`
-      //     *,
-      //     payees(name),
-      //     projects(title, code)
-      //   `)
-      //   .order('date', { ascending: false });
-
-      // if (vouchersError) throw vouchersError;
       
-      // totalVouchers = vouchers?.length || 0;
-      // totalAmount = vouchers?.reduce((sum, voucher) => sum + (voucher.gross || 0), 0) || 0;
-
-      // Create recent activity from recent vouchers
-      recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
-        type: 'voucher' as const,
-        title: `${voucher.dv_no} - ${voucher.payees?.name}`,
-        date: voucher.date,
-        amount: voucher.gross
-      }));
 
     } catch (err) {
       console.error('Error loading dashboard data:', err);
