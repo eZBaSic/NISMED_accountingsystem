@@ -12,6 +12,7 @@
     date: string;
     amount?: number;
   }> = [];
+  let role: string | null = null;
 
   // Loading states
   let isLoading = true;
@@ -60,6 +61,17 @@
       if (!user) {
         throw new Error('User not logged in')
       }
+
+      // Get User Role
+      const { data: profile, error: userRoleError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (userRoleError) {
+        throw userRoleError;
+      }
+      role = profile?.role ?? 'user';
 
       // Get projects assigned to user
       const { data: userProjects, error: userProjectsError } = await supabase
@@ -445,43 +457,45 @@
         </div>
       {/if}
     </div>
-
-    <!-- Data Export -->
-    <div class="section">
-      <h2>Data Export</h2>
-      <div class="export-section">
-        <div class="export-info">
-          <h3>Export Data to CSV</h3>
-          <p>Download your projects and vouchers data in CSV format for backup or analysis.</p>
-          
-          <div class="export-details">
-            <div class="export-item">
-              <span class="export-icon">📁</span>
-              <span>Projects data with codes and details</span>
-            </div>
-            <div class="export-item">
-              <span class="export-icon"></span>
-              <span>All vouchers with complete transaction history</span>
+    
+    {#if role == 'admin'}
+      <!-- Data Export -->
+      <div class="section">
+        <h2>Data Export</h2>
+        <div class="export-section">
+          <div class="export-info">
+            <h3>Export Data to CSV</h3>
+            <p>Download your projects and vouchers data in CSV format for backup or analysis.</p>
+            
+            <div class="export-details">
+              <div class="export-item">
+                <span class="export-icon">📁</span>
+                <span>Projects data with codes and details</span>
+              </div>
+              <div class="export-item">
+                <span class="export-icon"></span>
+                <span>All vouchers with complete transaction history</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="export-action">
-          {#if isExporting}
-            <div class="export-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: {exportProgress}%"></div>
+          <div class="export-action">
+            {#if isExporting}
+              <div class="export-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: {exportProgress}%"></div>
+                </div>
+                <p class="progress-text">Exporting data... {exportProgress}%</p>
               </div>
-              <p class="progress-text">Exporting data... {exportProgress}%</p>
-            </div>
-          {:else}
-            <button class="export-button" on:click={exportAllData}>
-              📥 Export Data
-            </button>
-          {/if}
+            {:else}
+              <button class="export-button" on:click={exportAllData}>
+                📥 Export Data
+              </button>
+            {/if}
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
   {/if}
 </div>
 
