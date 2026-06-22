@@ -357,7 +357,7 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
   <tbody>
     {#each sortedVoucherRows as row, idx}
       <tr>
-        <td><input type="text" value={row.dv_no} on:input={e => updateRow(idx, 'dv_no', (e.target as HTMLInputElement).value)} /></td>
+        <td>  <input type="text" value={row.dv_no} on:input={e => updateRow(idx, 'dv_no', (e.target as HTMLInputElement).value)} /></td>
         <td><input type="text" value={row.name} on:input={e => updateRow(idx, 'name', (e.target as HTMLInputElement).value)} /></td>
         <td><input type="text" value={row.address} on:input={e => updateRow(idx, 'address', (e.target as HTMLInputElement).value)} /></td>
         <td><input type="date" value={row.date} on:input={e => updateRow(idx, 'date', (e.target as HTMLInputElement).value)} /></td>

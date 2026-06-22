@@ -403,20 +403,20 @@
       <tbody>
         {#each sortedVouchers as voucher}
           <tr>
-            <td class="font-medium">{voucher.dv_no}</td>
-            <td>{voucher.payee_name}</td>
-            <td class="text-sm text-gray-600">{voucher.payee_address}</td>
-            <td>{new Date(voucher.date).toLocaleDateString()}</td>
+            <td style="text-align: center;" class="font-medium">{voucher.dv_no}</td>
+            <td style="text-align: center;">{voucher.payee_name}</td>
+            <td style="text-align: center;" class="text-sm text-gray-600">{voucher.payee_address}</td>
+            <td style="text-align: center;">{new Date(voucher.date).toLocaleDateString()}</td>
             <td class="text-center">{voucher.nth_yearly_voucher}</td>
-            <td class="text-right font-medium">₱{voucher.gross.toLocaleString()}</td>
+            <td class="text-center">₱{voucher.gross.toLocaleString()}</td>
             <td class="text-center">
               <span class="tax-badge {voucher.has_tax_deduction ? 'tax-yes' : 'tax-no'}">
                 {voucher.has_tax_deduction ? 'Yes' : 'No'}
               </span>
             </td>
-            <td class="particulars">{voucher.particulars}</td>
-            <td class="payment-mode">{voucher.payment_mode}</td>
-            <td class="text-sm text-gray-600">{voucher.remarks}</td>
+            <td style="text-align: center;" class="particulars">{voucher.particulars} </td>
+            <td style="text-align: center;" class="payment-mode">{voucher.payment_mode}</td>
+            <td style="text-align: center;" class="text-sm text-gray-600">{voucher.remarks}</td>
             <td class="actions">
               <button class="pdf-button pdf-single" on:click={() => generateSingleVoucherPDF(voucher)} title="Generate PDF for this voucher">
                 📄 PDF
@@ -637,7 +637,7 @@
   background: oklch(44.8% 0.119 151.328); /* dark green */
   color: #fff;
   padding: 0.75rem 1rem;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   font-size: 0.875rem;
   text-transform: uppercase;

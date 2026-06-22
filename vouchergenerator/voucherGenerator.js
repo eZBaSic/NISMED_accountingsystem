@@ -213,9 +213,24 @@ function generateVoucher(voucherData) {
   doc.setFont("Times", "normal");
   doc.setFontSize(10);
   
-  const receiptText = `Received from the Foundation for the Promotion of Science and Mathematics Education and Research, Inc. the amount of ${words}`;
-  const receiptLines = doc.splitTextToSize(receiptText, 185);
+  const baseText = "Received from the Foundation for the Promotion of Science and Mathematics Education and Research, Inc. the amount of "
+  const receiptLines = doc.splitTextToSize(baseText, 185);
   doc.text(receiptLines, 12, receiptY + 10);
+  let yCursor = receiptY + 10;
+  lines.forEach((line, index) => {
+    doc.text(line, 12, yCursor);
+    yCursor += 5;
+  });
+  const lastLineWidth = doc.getTextWidth(lines[lines.length - 1]);
+  doc.setFont("Times", "bold");
+  doc.text(words, 12 + lastLineWidth, yCursor - 5);
+  const wordWidth = doc.getTextWidth(words);
+  doc.line(
+    12 + lastLineWidth,
+    yCursor - 4,
+    12 + lastLineWidth + wordWidth,
+    yCursor - 4
+  );
 
   doc.setFont("Times", "bold");
   doc.setFontSize(12);
