@@ -77,11 +77,32 @@
 
   async function add_project(new_project: project) {    
     try {
-      const { data, error } = await supabase
+
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('User not logged in');
+      }
+
+      const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .insert(new_project)
+        .select()
+        .single();
 
-      if (error) throw error
+      if (projectError) throw projectError
+
+      const { error: accessError } = await supabase
+        .from('user_projects')
+        .insert({
+          user_id: user.id,
+          project_id: projectData.id
+        });
+
+      if (accessError) throw accessError;
+      
       alert("project added succesfully")
     } catch (error) {
       alert("error inserting to database")
