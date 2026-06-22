@@ -395,7 +395,7 @@
         <div class="stat-icon">💰</div>
         <div class="stat-content">
           <h3>Total Amount</h3>
-          <p class="stat-number">{formatCurrency(totalAmount)}</p>
+          <p class="stat-number stat-small">{formatCurrency(totalAmount)}</p>
         </div>
       </div>
     </div>
@@ -609,6 +609,10 @@
   font-weight: 700;
   color: #1f2937;
   margin: 0;
+}
+
+.stat-small {
+  font-size: 1.5rem;
 }
 
 /* Sections */
