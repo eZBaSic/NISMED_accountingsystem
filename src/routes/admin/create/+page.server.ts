@@ -1,4 +1,4 @@
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
 export const actions = {
@@ -40,8 +40,6 @@ export const actions = {
 			});
 		}
 
-		return {
-			success: true
-		};
+		throw redirect(303, '/admin');
 	}
 };
