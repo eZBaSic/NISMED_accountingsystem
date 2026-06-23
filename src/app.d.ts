@@ -3,6 +3,8 @@
 declare global {
 	namespace App {
 		interface Locals {
+			supabase: any;
+			session: any;
 			user: {
 				id: string;
 				email: string;
