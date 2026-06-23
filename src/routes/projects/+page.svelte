@@ -3,7 +3,7 @@
   // onMount actions
   // ===============
   
-  import { show } from '$lib/helpers';
+  import { show, getUserAccess } from '$lib/helpers';
   import { onMount } from 'svelte';
   onMount(async () => {
     await load_summaries()
@@ -16,14 +16,41 @@
   let summaries: summary[] = []
   import { supabase } from "$lib/supabaseClient";
 	import RedAsterisk from '$lib/components/RedAsterisk.svelte';
+
   async function load_summaries() {
     try {
-      const { data, error } = await supabase
-        .from("summaries")
-        .select();
 
-      if (error) throw error
-      summaries = data ?? []
+      const access = await getUserAccess();
+
+      if (access?.role == 'admin') {
+        // ADMIN
+        const { data, error } = await supabase
+          .from("summaries")
+          .select();
+
+        if (error) throw error
+        summaries = data ?? []
+        return;
+      } else {
+        // USER -> assigned projects only
+        const projectIds = access?.projectIds;
+
+        if (!projectIds || projectIds.length === 0) {
+          summaries = [];
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('summaries')
+          .select()
+          .in('project_id', projectIds);
+
+        if (error) throw error;
+        summaries = data ?? [];
+        return;
+      }
+
+
     } catch (error) { 
       alert(`error loading database`)
       // show(`error loading database\n${JSON.stringify(error)}`)
@@ -50,11 +77,32 @@
 
   async function add_project(new_project: project) {    
     try {
-      const { data, error } = await supabase
+
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('User not logged in');
+      }
+
+      const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .insert(new_project)
+        .select()
+        .single();
 
-      if (error) throw error
+      if (projectError) throw projectError
+
+      const { error: accessError } = await supabase
+        .from('user_projects')
+        .insert({
+          user_id: user.id,
+          project_id: projectData.id
+        });
+
+      if (accessError) throw accessError;
+      
       alert("project added succesfully")
     } catch (error) {
       alert("error inserting to database")

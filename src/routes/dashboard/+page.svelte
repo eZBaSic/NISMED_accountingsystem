@@ -12,6 +12,7 @@
     date: string;
     amount?: number;
   }> = [];
+  let role: string | null = null;
 
   // Loading states
   let isLoading = true;
@@ -52,36 +53,116 @@
       isLoading = true;
       error = null;
 
-      // Load projects count
-      const { data: projects, error: projectsError } = await supabase
-        .from('projects')
-        .select('*');
+      // Get current user
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
 
-      if (projectsError) throw projectsError;
-      totalProjects = projects?.length || 0;
+      if (!user) {
+        throw new Error('User not logged in')
+      }
 
-      // Load vouchers data
-      const { data: vouchers, error: vouchersError } = await supabase
-        .from('vouchers')
-        .select(`
-          *,
-          payees(name),
-          projects(title, code)
-        `)
-        .order('date', { ascending: false });
+      // Get User Role
+      const { data: profile, error: userRoleError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (userRoleError) {
+        throw userRoleError;
+      }
+      role = profile?.role ?? 'user';
 
-      if (vouchersError) throw vouchersError;
+      if (role == 'user') {
+        // Get projects assigned to user
+        const { data: userProjects, error: userProjectsError } = await supabase
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', user.id);
+        if (userProjectsError) {
+          throw userProjectsError;
+        }
+
+        const projectIds = userProjects?.map(up => up.project_id) ?? [];
+        if (projectIds.length === 0) {
+          return;
+        }
       
-      totalVouchers = vouchers?.length || 0;
-      totalAmount = vouchers?.reduce((sum, voucher) => sum + (voucher.gross || 0), 0) || 0;
+        // Load only assigned projects
+        const { data: projects, error: projectsError } =
+        await supabase
+          .from('projects')
+          .select('*')
+          .in('id', projectIds);
 
-      // Create recent activity from recent vouchers
-      recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
-        type: 'voucher' as const,
-        title: `${voucher.dv_no} - ${voucher.payees?.name}`,
-        date: voucher.date,
-        amount: voucher.gross
-      }));
+        if (projectsError) throw projectsError;
+
+        totalProjects = projects?.length ?? 0;
+
+        // Load vouchers only for assigned projects
+        const { data: vouchers, error: vouchersError } =
+          await supabase
+            .from('vouchers')
+            .select(`
+              *,
+              payees(name),
+              projects(title, code)
+            `)
+            .in('project_id', projectIds)
+            .order('date', { ascending: false });
+
+        if (vouchersError) throw vouchersError;
+
+        totalVouchers = vouchers?.length ?? 0;
+
+        totalAmount =
+          vouchers?.reduce(
+            (sum, voucher) => sum + (voucher.gross || 0),
+            0
+          ) ?? 0;
+        
+        // Create recent activity from recent vouchers
+        recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
+          type: 'voucher' as const,
+          title: `${voucher.dv_no} - ${voucher.payees?.name}`,
+          date: voucher.date,
+          amount: voucher.gross
+        }));
+      } else {
+        // Admin, show all
+        // Load projects count
+        const { data: projects, error: projectsError } = await supabase
+          .from('projects')
+          .select('*');
+
+        if (projectsError) throw projectsError;
+        totalProjects = projects?.length || 0;
+
+        // Load vouchers data
+        const { data: vouchers, error: vouchersError } = await supabase
+          .from('vouchers')
+          .select(`
+            *,
+            payees(name),
+            projects(title, code)
+          `)
+          .order('date', { ascending: false });
+
+        if (vouchersError) throw vouchersError;
+        
+        totalVouchers = vouchers?.length || 0;
+        totalAmount = vouchers?.reduce((sum, voucher) => sum + (voucher.gross || 0), 0) || 0;
+
+        // Create recent activity from recent vouchers
+        recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
+          type: 'voucher' as const,
+          title: `${voucher.dv_no} - ${voucher.payees?.name}`,
+          date: voucher.date,
+          amount: voucher.gross
+        }));
+      }
+
+      
 
     } catch (err) {
       console.error('Error loading dashboard data:', err);
@@ -336,7 +417,7 @@
         <div class="stat-icon">💰</div>
         <div class="stat-content">
           <h3>Total Amount</h3>
-          <p class="stat-number">{formatCurrency(totalAmount)}</p>
+          <p class="stat-number stat-small">{formatCurrency(totalAmount)}</p>
         </div>
       </div>
     </div>
@@ -386,43 +467,45 @@
         </div>
       {/if}
     </div>
-
-    <!-- Data Export -->
-    <div class="section">
-      <h2>Data Export</h2>
-      <div class="export-section">
-        <div class="export-info">
-          <h3>Export Data to CSV</h3>
-          <p>Download your projects and vouchers data in CSV format for backup or analysis.</p>
-          
-          <div class="export-details">
-            <div class="export-item">
-              <span class="export-icon">📁</span>
-              <span>Projects data with codes and details</span>
-            </div>
-            <div class="export-item">
-              <span class="export-icon"></span>
-              <span>All vouchers with complete transaction history</span>
+    
+    {#if role == 'admin'}
+      <!-- Data Export -->
+      <div class="section">
+        <h2>Data Export</h2>
+        <div class="export-section">
+          <div class="export-info">
+            <h3>Export Data to CSV</h3>
+            <p>Download your projects and vouchers data in CSV format for backup or analysis.</p>
+            
+            <div class="export-details">
+              <div class="export-item">
+                <span class="export-icon">📁</span>
+                <span>Projects data with codes and details</span>
+              </div>
+              <div class="export-item">
+                <span class="export-icon"></span>
+                <span>All vouchers with complete transaction history</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="export-action">
-          {#if isExporting}
-            <div class="export-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: {exportProgress}%"></div>
+          <div class="export-action">
+            {#if isExporting}
+              <div class="export-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: {exportProgress}%"></div>
+                </div>
+                <p class="progress-text">Exporting data... {exportProgress}%</p>
               </div>
-              <p class="progress-text">Exporting data... {exportProgress}%</p>
-            </div>
-          {:else}
-            <button class="export-button" on:click={exportAllData}>
-              📥 Export Data
-            </button>
-          {/if}
+            {:else}
+              <button class="export-button" on:click={exportAllData}>
+                📥 Export Data
+              </button>
+            {/if}
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
   {/if}
 </div>
 
@@ -550,6 +633,10 @@
   font-weight: 700;
   color: #1f2937;
   margin: 0;
+}
+
+.stat-small {
+  font-size: 1.5rem;
 }
 
 /* Sections */

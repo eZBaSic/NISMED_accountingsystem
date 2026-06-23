@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { supabase } from "$lib/supabaseClient";
   import { generateVoucherPDF, generateMultipleVouchersPDF, type VoucherPDFData } from "$lib/pdfGenerator";
+	import { getUserAccess } from '$lib/helpers';
 
   // Project selection - expanded to include all fields needed for PDF
   let projects: { id: number, code: string, title: string, authorized_rep: string, approver: string }[] = [];
@@ -251,18 +252,52 @@
   // Load projects
   async function load_projects() {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, code, title, authorized_rep, approver')
-        .order('code');
-      
-      if (error) throw error;
-      projects = data ?? [];
-      
-      // Auto-select first project if available
-      if (projects.length > 0) {
-        selectedProjectId = projects[0].id;
+
+      const access = await getUserAccess();
+
+      if (!access) {
+        projects = [];
+        return;
       }
+      
+      if (access.role == 'admin') {
+        // ADMIN
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, code, title, authorized_rep, approver')
+          .order('code');
+        
+        if (error) throw error;
+        projects = data ?? [];
+        
+        // Auto-select first project if available
+        if (projects.length > 0) {
+          selectedProjectId = projects[0].id;
+        }
+        return;
+      } else {
+        // User 
+        if (access.projectIds.length === 0) {
+          projects = [];
+          selectedProjectId = 0;
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, code, title, authorized_rep, approver')
+          .in('id', access.projectIds)
+          .order('code');
+
+        if (error) throw error;
+
+        projects = data ?? [];
+
+        if (projects.length > 0) {
+          selectedProjectId = projects[0].id;
+        }
+      }
+
     } catch (error) {
       console.error('Error loading projects:', error);
       alert('Error loading projects');
