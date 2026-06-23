@@ -1,6 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user;
@@ -12,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		};
 	}
 
-	const { data: profile } = await supabaseAdmin
+	const { data: profile } = await locals.supabase
 		.from('profiles')
 		.select('role')
 		.eq('id', user.id)
@@ -21,13 +20,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 	let summaries = [];
 
 	if (profile?.role === 'admin') {
-		const { data } = await supabaseAdmin
+		const { data } = await locals.supabase
 			.from('summaries')
 			.select('*');
 
 		summaries = data ?? [];
 	} else {
-		const { data: userProjects } = await supabaseAdmin
+		const { data: userProjects } = await locals.supabase
 			.from('user_projects')
 			.select('project_id')
 			.eq('user_id', user.id);
@@ -36,7 +35,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			userProjects?.map((p) => p.project_id) ?? [];
 
 		if (projectIds.length > 0) {
-			const { data } = await supabaseAdmin
+			const { data } = await locals.supabase
 				.from('summaries')
 				.select('*')
 				.in('project_id', projectIds);
@@ -71,7 +70,7 @@ export const actions: Actions = {
 		}
 
 		const { data: project, error } =
-			await supabaseAdmin
+			await locals.supabase
 				.from('projects')
 				.insert({
 					code,
@@ -90,7 +89,7 @@ export const actions: Actions = {
 			});
 		}
 
-		await supabaseAdmin
+		await locals.supabase
 			.from('user_projects')
 			.insert({
 				user_id: user.id,
@@ -102,13 +101,13 @@ export const actions: Actions = {
 		};
 	},
 
-	updateProject: async ({ request }) => {
+	updateProject: async ({ request, locals }) => {
 		const form = await request.formData();
 
 		const id = Number(form.get('id'));
 
 		const { error } =
-			await supabaseAdmin
+			await locals.supabase
 				.from('projects')
 				.update({
 					code: form.get('code'),
@@ -133,18 +132,18 @@ export const actions: Actions = {
 		};
 	},
 
-	deleteProject: async ({ request }) => {
+	deleteProject: async ({ request, locals }) => {
 		const form = await request.formData();
 
 		const id = Number(form.get('id'));
 
-		await supabaseAdmin
+		await locals.supabase
 			.from('user_projects')
 			.delete()
 			.eq('project_id', id);
 
 		const { error } =
-			await supabaseAdmin
+			await locals.supabase
 				.from('projects')
 				.delete()
 				.eq('id', id);
