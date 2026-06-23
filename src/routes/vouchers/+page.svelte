@@ -1,35 +1,56 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from "$lib/supabaseClient";
-  import { getUserAccess } from '$lib/helpers';
+  import type { PageData } from './$types';
+
+  let { data }: { data: PageData } = $props();
+
 
 
   // Project selection
-  let projects: { id: number, code: string, title: string }[] = [];
-  let selectedProjectId: number = 0;
+  let projects = $derived(data.projects);
 
-// Derived selected project and code
-$: selectedProject = projects.find(p => p.id === selectedProjectId);
-$: selectedProjectCode = selectedProject ? selectedProject.code : '';
+  
+  let selectedProjectId = $derived(data.projects[0].id);
+
+  // Derived selected project and code
+  let selectedProject = $derived(
+    projects.find((p) => p.id === selectedProjectId)
+  );
+
+  let selectedProjectCode = $derived(
+    selectedProject?.code ?? ''
+  );
 
 // Editable voucher rows
-let voucherRows: voucher_entry[] = [];
+let voucherRows = $state<voucher_entry[]>([]);
 
 // Sorting state
-let sortField: 'dv_no' | 'name' | 'date' | null = null;
-let sortDirection: 'asc' | 'desc' = 'asc';
+let sortField = $state<
+	'dv_no' | 'name' | 'date' | null
+>(null);
+let sortDirection = $state<'asc' | 'desc'>('asc');
 
 // Loading states for save operations
-let savingRow: boolean = false;
-let savingAll: boolean = false;
+let savingRow: boolean = $state(false);
+let savingAll: boolean = $state(false);
 
 // When selectedProjectId changes, update all voucherRows' project_id to selectedProjectCode
-$: if (voucherRows.length && selectedProjectCode) {
-  voucherRows = voucherRows.map(row => ({ ...row, project_id: selectedProjectCode }));
+function updateProjectForRows() {
+	voucherRows = voucherRows.map((row) => ({
+		...row,
+		project_id: selectedProjectCode
+	}));
 }
 
 // Computed sorted voucher rows
-$: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
+let sortedVoucherRows = $derived(
+	sortVoucherRows(
+		voucherRows,
+		sortField,
+		sortDirection
+	)
+);
 
   // Helper for today's date
   function today() {
@@ -96,85 +117,9 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
     );
   }
 
-  // Load projects for dropdown
-  async function load_projects() {
-    try {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-      if (!user) {
-        projects = [];
-        return;
-      }
-
-      // Get user's role
-      const { data: profile, error: profileError } = 
-        await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      // ADMIN: load all projects
-      if (profile?.role == 'admin') {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, code, title');
-
-        if (error) {
-          throw error;
-        }
-
-        projects = data ?? [];
-
-        if (projects.length > 0) selectedProjectId = projects[0].id;
-
-        return;
-      } else {
-        // USER: Get assigned projects IDs
-        const { data: userProjects, error: userProjectsError } = await supabase
-          .from('user_projects')
-          .select('project_id')
-          .eq('user_id', user.id);
-
-        if (userProjectsError) {
-          throw userProjectsError;
-        }
-
-        const projectIds = userProjects?.map((p) => p.project_id) ?? [];
-        if (projectIds.length === 0) {
-          projects = [];
-          selectedProjectId = 0;
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, code, title')
-          .in("id", projectIds);
-
-        if (error) {
-          throw error;
-        }
-
-        projects = data ?? [];
-        if (projects.length > 0) {
-          selectedProjectId = projects[0].id;
-        }
-      } 
-    } catch (err) {
-        console.error('Error loading projects:', err);
-        projects = [];
-        selectedProjectId = 0;
-    }
-  }
-
   // Add a new empty row
   function addRow() {
+    console.log(projects);
     const selectedProject = projects.find(p => p.id === selectedProjectId)
     const selectedProjectTitle = selectedProject ? selectedProject.title : ''
     
@@ -371,7 +316,6 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
   }
 
   onMount(async () => {
-    await load_projects();
     addRow();
   });
 </script>
@@ -379,7 +323,7 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 <div class="page-header">
   <h1 class="page-title">Add Vouchers</h1>
   <div class="header-actions">
-    <select class="project-select" bind:value={selectedProjectId}>
+    <select class="project-select" bind:value={selectedProjectId} onchange={updateProjectForRows}>
       {#each projects as p}
         <option value={p.id}>{p.code}</option>
       {/each}
@@ -388,7 +332,7 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
     <span class="text-gray-600/70">|</span>
     
     {#if sortField}
-      <button class="sort-reset-btn" on:click={() => { sortField = null; sortDirection = 'asc'; }}>
+      <button class="sort-reset-btn" onclick={() => { sortField = null; sortDirection = 'asc'; }}>
         Clear Sort
       </button>
       <span class="text-gray-600/70">|</span>
@@ -396,7 +340,7 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
     
     <button 
       class="save-all-btn bg-blue-500 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
-      on:click={saveAllVouchers}
+      onclick={saveAllVouchers}
       disabled={savingAll || voucherRows.length === 0}
     >
       {savingAll ? 'Saving All...' : `Save All (${voucherRows.length})`}
@@ -407,14 +351,14 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
 <table class="voucher-table border-2 border-green-800">
   <thead>
     <tr>
-      <th class="sortable" on:click={() => handleSort('dv_no')} title="Click to sort by DV Number">
+      <th class="sortable" onclick={() => handleSort('dv_no')} title="Click to sort by DV Number">
         DV No. <span class="sort-icon">{getSortIcon('dv_no')}</span>
       </th>
-      <th class="sortable" on:click={() => handleSort('name')} title="Click to sort by Name">
+      <th class="sortable" onclick={() => handleSort('name')} title="Click to sort by Name">
         Name <span class="sort-icon">{getSortIcon('name')}</span>
       </th>
       <th>Address</th>
-      <th class="sortable" on:click={() => handleSort('date')} title="Click to sort by Date">
+      <th class="sortable" onclick={() => handleSort('date')} title="Click to sort by Date">
         Date <span class="sort-icon">{getSortIcon('date')}</span>
       </th>
       <th>Gross (PHP)</th>
@@ -428,37 +372,37 @@ $: sortedVoucherRows = sortVoucherRows(voucherRows, sortField, sortDirection);
   <tbody>
     {#each sortedVoucherRows as row, idx}
       <tr>
-        <td>  <input type="text" value={row.dv_no} on:input={e => updateRow(idx, 'dv_no', (e.target as HTMLInputElement).value)} /></td>
-        <td><input type="text" value={row.name} on:input={e => updateRow(idx, 'name', (e.target as HTMLInputElement).value)} /></td>
-        <td><input type="text" value={row.address} on:input={e => updateRow(idx, 'address', (e.target as HTMLInputElement).value)} /></td>
-        <td><input type="date" value={row.date} on:input={e => updateRow(idx, 'date', (e.target as HTMLInputElement).value)} /></td>
-        <td><input type="number" min="0" step="500" value={row.gross} on:input={e => updateRow(idx, 'gross', +(e.target as HTMLInputElement).value)} /></td>
-        <td><input type="checkbox" checked={row.tax} on:change={e => updateRow(idx, 'tax', (e.target as HTMLInputElement).checked)} /></td>
-        <td><input type="text" value={row.particulars} on:input={e => updateRow(idx, 'particulars', (e.target as HTMLInputElement).value)} /></td>
+        <td>  <input type="text" value={row.dv_no} oninput={e => updateRow(idx, 'dv_no', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="text" value={row.name} oninput={e => updateRow(idx, 'name', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="text" value={row.address} oninput={e => updateRow(idx, 'address', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="date" value={row.date} oninput={e => updateRow(idx, 'date', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="number" min="0" step="500" value={row.gross} oninput={e => updateRow(idx, 'gross', +(e.target as HTMLInputElement).value)} /></td>
+        <td><input type="checkbox" checked={row.tax} onchange={e => updateRow(idx, 'tax', (e.target as HTMLInputElement).checked)} /></td>
+        <td><input type="text" value={row.particulars} oninput={e => updateRow(idx, 'particulars', (e.target as HTMLInputElement).value)} /></td>
         <td>
-          <select value={row.payment_mode} on:change={e => updateRow(idx, 'payment_mode', (e.target as HTMLSelectElement).value)} class="mode-select">
+          <select value={row.payment_mode} onchange={e => updateRow(idx, 'payment_mode', (e.target as HTMLSelectElement).value)} class="mode-select">
             <option value="">Select</option>
             <option value="Cash">Cash</option>
             <option value="Online Payment">Online Payment</option>
             <option value="Bank Transfer">Bank Transfer</option>
           </select>
         </td>
-        <td><input type="text" value={row.remarks} on:input={e => updateRow(idx, 'remarks', (e.target as HTMLInputElement).value)} /></td>
+        <td><input type="text" value={row.remarks} oninput={e => updateRow(idx, 'remarks', (e.target as HTMLInputElement).value)} /></td>
         <td class="space-x-1">
           <button 
             class="text-blue-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed" 
-            on:click={() => saveVoucherRow(row, getOriginalIndex(row))}
+            onclick={() => saveVoucherRow(row, getOriginalIndex(row))}
             disabled={savingRow}
           >
             {savingRow ? 'Saving...' : 'Save'}
           </button>
-          <button class="text-red-500 hover:underline" on:click={() => deleteRow(getOriginalIndex(row))}>Delete</button>
+          <button class="text-red-500 hover:underline" onclick={() => deleteRow(getOriginalIndex(row))}>Delete</button>
         </td>
       </tr>
     {/each}
     <tr>
       <td colspan="10" style="text-align:center;">
-        <button class="add-row-btn" on:click={addRow}>+ Add Row</button>
+        <button class="add-row-btn" onclick={addRow}>+ Add Row</button>
       </td>
     </tr>
   </tbody>
