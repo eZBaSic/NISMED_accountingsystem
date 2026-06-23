@@ -2,6 +2,8 @@
 
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 
 export const load: PageServerLoad = async ({locals}) => {
 	const user = locals.user;

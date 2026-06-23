@@ -119,7 +119,6 @@ let sortedVoucherRows = $derived(
 
   // Add a new empty row
   function addRow() {
-    console.log(projects);
     const selectedProject = projects.find(p => p.id === selectedProjectId)
     const selectedProjectTitle = selectedProject ? selectedProject.title : ''
     
