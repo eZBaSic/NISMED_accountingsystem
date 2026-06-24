@@ -59,7 +59,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		};
 	}
 
-	const { data: vouchers } = await supabase
+	const { data: vouchers, error: vouchersError } = await supabase
 		.from('vouchers')
 		.select(`
 			id,
@@ -78,20 +78,22 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 			)
 		`)
 		.in('project_id', allowedProjectIds)
-		.eq('has_tax_deduction', false)
 		.order('date', { ascending: false });
 
+	if (vouchersError) {
+		throw vouchersError;
+	}
 	const years = [
 		...new Set(
 			(vouchers ?? [])
 				.map((v) => new Date(v.date).getFullYear())
 				.filter(Boolean)
 		)
-	].sort((a, b) => b - a);
+	].sort((a, b) => b - a) as number[];
 
 	return {
 		projects,
-		years,
+		years: years ?? [],
 		vouchers: vouchers ?? []
 	};
 };

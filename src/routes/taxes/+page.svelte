@@ -6,11 +6,14 @@
 	let { data }: { data: PageData } = $props();
 
 	// Project selection - expanded to include all fields needed for PDF
-	let years = $state(data.years);
-	let selectedYear = $state<number | null>(null);
+	let years: number[] = $derived(data.years);
 
-	let projects = $state(data.projects);
-	const allVouchers = data.vouchers;
+	let selectedYear = $derived<number | null>(
+		years[0] ?? null
+	);
+
+	let projects = $derived(data.projects);
+	const allVouchers = $derived(data.vouchers);
 
     let selectedProjectCode: string = $state('');
 
@@ -188,7 +191,7 @@
 	}
 
 	async function generateYearlyPDF(yearly: YearlyWithDetails[]) {
-		if (selectedYear == "") {
+		if (selectedYear == null) {
 			alert('Please select a project with vouchers first');
 			return;
 		}
@@ -319,7 +322,7 @@
 {/if}
 
 {#if selectedYear && Number(selectedYear) !== 0}
-	<button class="pdf-button pdf-all" on:click={() => generateYearlyPDF(yearly)}>
+	<button class="pdf-button pdf-all" onclick={() => generateYearlyPDF(yearly)}>
 		📄 Generate Annual Tax Summary
 	</button>
 {/if}
