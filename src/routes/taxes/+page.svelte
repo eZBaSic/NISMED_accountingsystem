@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { generateYearlyTaxPDF, generateProjectTaxPDF, type YearlyTaxPDFData, type ProjectTaxPDFData } from '$lib/pdfGenerator_tax';
-
+    import {exportExcel, type IndividualReport} from '$lib/excelGenerator';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -162,6 +162,27 @@
 		}
 	}
 
+    async function generateExcel(project: VoucherWithDetails []) {
+        if (!selectedProjectCode) {
+			alert('Please select a project first');
+			return;
+		}
+        try{
+            const testing: IndividualReport [] = project.map((p) => ({    // FIX INTERFACE
+                payee_name: p.payee_name,
+                date: p.date,
+                gross: p.gross,
+                taxed_amount: p.taxed_amount,
+                net_amount: p.net_amount
+		}));
+
+        await exportExcel(testing)
+        } catch (error) {
+			console.error('Error generating PDF:', error);
+			alert('Error generating Excel File.');
+		}
+    }
+
 	// PDF Generation Functions
 	async function generateProjectPDF(project: VoucherWithDetails []) {
 		if (!selectedProjectCode) {
@@ -182,7 +203,6 @@
                 net_amount: p.net_amount,
                 remarks: p.remarks
 			}));
-
 			await generateProjectTaxPDF(projectPDFData, selectedProjectCode);
 		} catch (error) {
 			console.error('Error generating PDF:', error);
@@ -202,10 +222,7 @@
                 gross: y.gross,
                 taxed_amount: y.taxed_amount,
                 net_amount: y.net_amount
-            }));
-            console.log("YEARLY:", yearly);
-            console.log("IS ARRAY:", Array.isArray(yearly));
-            console.log("TYPE:", typeof yearly);    
+            }));    
 			await generateYearlyTaxPDF(yearlyPDFDataList, Number(selectedYear));
 		} catch (error) {
 			console.error('Error generating PDF:', error);
@@ -330,6 +347,9 @@
 {#if selectedProjectCode}
 	<button class="pdf-button pdf-all" onclick={() =>generateProjectPDF(vouchers)}>
 		📄 Generate Project Tax Summary
+	</button>
+	<button class="pdf-button pdf-all" onclick={() =>generateExcel(vouchers)}>
+		📊 Generate Summary of Payees
 	</button>
 {/if}
 
