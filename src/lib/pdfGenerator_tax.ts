@@ -247,7 +247,7 @@ export async function generateYearlyTaxPDF(yearly: YearlyTaxPDFData[], Year: num
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let row = 271;
+  let row = 35;
   let gross = 0;
   let taxed = 0;
   let net = 0;

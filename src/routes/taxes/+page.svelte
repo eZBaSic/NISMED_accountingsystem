@@ -10,7 +10,7 @@
 
 	// Project selection - expanded to include all fields needed for PDF
 	let years: number[] = [];
-	let selectedYear: number | null = null;
+	let selectedYear: string = "";
 
 	let projects: any[] = [];
 	let projectCodes: string[] = [];
@@ -19,7 +19,7 @@
 
 	// Derived selected project and code
 	$: flteredVouchers = selectedYear
-		? vouchers.filter((v) => new Date(v.date).getFullYear() === selectedYear)
+		? vouchers.filter((v) => new Date(v.date).getFullYear() === Number(selectedYear))
 		: vouchers;
 
 	$: selectedProject = projects.find((p) => p.id === selectedProjectId);
@@ -161,7 +161,7 @@
 	}
 
 	async function generateYearlyPDF(yearly: YearlyWithDetails[]) {
-		if (!selectedYear) {
+		if (selectedYear == "") {
 			alert('Please select a project with vouchers first');
 			return;
 		}
@@ -176,7 +176,7 @@
             console.log("YEARLY:", yearly);
             console.log("IS ARRAY:", Array.isArray(yearly));
             console.log("TYPE:", typeof yearly);    
-			await generateYearlyTaxPDF(yearlyPDFDataList, selectedYear);
+			await generateYearlyTaxPDF(yearlyPDFDataList, Number(selectedYear));
 		} catch (error) {
 			console.error('Error generating PDF:', error);
 			alert('Error generating PDF. Make sure jsPDF library is loaded.');
@@ -207,14 +207,14 @@
 	}
 
 	async function load_vouchers_by_year() {
-        if (selectedYear === null || selectedYear === 0) {
+        if (selectedYear === "" || Number(selectedYear) === 0) {
             yearly = [];
             projectCodes = [];
             return;
         }
 
 		try {
-            const year = selectedYear;
+            const year = Number(selectedYear);
 			const startDate = `${year}-01-01`;
 			const endDate = `${year}-12-31`;
 
@@ -380,7 +380,7 @@
 </div>
 
 		<!-- PROJECT CODE -->
-{#if selectedYear && selectedYear !== 0}
+{#if selectedYear && Number(selectedYear) !== 0}
 
     <div class="project-selector">
         <label for="project-code-select" class="sr-only">Select Project Code</label>
@@ -464,7 +464,7 @@
 
 {/if}
 
-{#if selectedYear && selectedYear !== 0}
+{#if selectedYear && Number(selectedYear) !== 0}
 	<button class="pdf-button pdf-all" on:click={() => generateYearlyPDF(yearly)}>
 		📄 Generate Annual Tax Summary
 	</button>
