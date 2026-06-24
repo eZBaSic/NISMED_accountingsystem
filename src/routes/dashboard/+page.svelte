@@ -5,9 +5,6 @@
   // Dashboard statistics
 	let { data }: { data: PageData } = $props();
 
-  // Loading states
-  let error: string | null = null;
-
   // CSV Export states
   let isExporting = $state(false);
   let exportProgress = $state(0);
@@ -49,7 +46,6 @@
     try {
       isExporting = true;
       exportProgress = 0;
-      error = null;
 
       // Step 1: Load all projects (20% progress)
       exportProgress = 20;
@@ -137,18 +133,6 @@
     return convertToCSV([headers, ...rows]);
   }
 
-  function generatePayeesCSV(payees: any[]): string {
-    const headers = ['ID', 'Name', 'Address', 'TIN ID'];
-    const rows = payees.map(payee => [
-      payee.id,
-      payee.name,
-      payee.address || '',
-      payee.tin_id || ''
-    ]);
-
-    return convertToCSV([headers, ...rows]);
-  }
-
   function generateVouchersCSV(vouchers: any[]): string {
     const headers = [
       'ID', 'DV Number', 'Date', 'Gross Amount', 'Has Tax Deduction', 
@@ -172,26 +156,6 @@
     ]);
 
     return convertToCSV([headers, ...rows]);
-  }
-
-  function generateSummaryCSV(data: any): string {
-    const totalAmount = data.vouchers.reduce((sum: number, voucher: any) => sum + (voucher.gross || 0), 0);
-    const vouchersWithTax = data.vouchers.filter((v: any) => v.has_tax_deduction).length;
-    const vouchersWithoutTax = data.vouchers.length - vouchersWithTax;
-
-    const summaryData = [
-      ['Metric', 'Value'],
-      ['Export Date', new Date().toLocaleDateString('en-PH')],
-      ['Total Projects', data.projects.length],
-      ['Total Payees', data.payees.length],
-      ['Total Vouchers', data.vouchers.length],
-      ['Total Amount (PHP)', totalAmount.toFixed(2)],
-      ['Vouchers with Tax Deduction', vouchersWithTax],
-      ['Vouchers without Tax Deduction', vouchersWithoutTax],
-      ['Average Voucher Amount (PHP)', data.vouchers.length > 0 ? (totalAmount / data.vouchers.length).toFixed(2) : '0.00']
-    ];
-
-    return convertToCSV(summaryData);
   }
 
   function convertToCSV(data: any[][]): string {
@@ -268,13 +232,6 @@
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon">💰</div>
-        <div class="stat-content">
-          <h3>Total Amount</h3>
-          <p class="stat-number stat-small">{formatCurrency(data.totalAmount)}</p>
-        </div>
-      </div>
     </div>
 
     <!-- Quick Navigation -->
@@ -457,7 +414,7 @@
 /* Navigation Grid */
 .navigation-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
   gap: 1.5rem;
 }
 

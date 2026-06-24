@@ -1,16 +1,23 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { supabase } from "$lib/supabaseClient";
   import { generateVoucherPDF, generateMultipleVouchersPDF, type VoucherPDFData } from "$lib/pdfGenerator";
-	import { getUserAccess } from '$lib/helpers';
+  import { goto } from '$app/navigation';
 
-  // Project selection - expanded to include all fields needed for PDF
-  let projects: { id: number, code: string, title: string, authorized_rep: string, approver: string }[] = [];
-  let selectedProjectId: number = 0;
+
+  let { data } = $props();
+
+  let projects = $derived(data.projects);
+  let vouchers = $state(data.vouchers);
+
+  let selectedProjectId = $state(
+    data.selectedProjectId
+  );
 
   // Derived selected project and code
-  $: selectedProject = projects.find(p => p.id === selectedProjectId);
-  $: selectedProjectCode = selectedProject ? selectedProject.code : '';
+  const selectedProject = $derived(
+    projects.find((p) => p.id === selectedProjectId)
+  );
+
+  const selectedProjectCode = $derived(selectedProject?.code);
 
   // Voucher data with proper joins
   interface VoucherWithDetails {
@@ -27,17 +34,16 @@
     remarks: string;
   }
 
-  let vouchers: VoucherWithDetails[] = [];
   let loading: boolean = false;
 
   // Sorting state
-  let sortField: 'dv_no' | 'payee_name' | 'date' | null = null;
-  let sortDirection: 'asc' | 'desc' = 'asc';
+  let sortField: 'dv_no' | 'payee_name' | 'date' | null = $state(null);
+  let sortDirection: 'asc' | 'desc' = $state('asc');
 
   // Edit modal state
-  let showEditModal = false;
-  let editingVoucher: VoucherWithDetails | null = null;
-  let editForm = {
+  let showEditModal = $state(false);
+  let editingVoucher: VoucherWithDetails | null = $state(null);
+  let editForm = $state({
     dv_no: '',
     date: '',
     gross: 0,
@@ -45,10 +51,12 @@
     particulars: '',
     payment_mode: '',
     remarks: ''
-  };
+  });
 
   // Computed sorted vouchers
-  $: sortedVouchers = sortVouchers(vouchers, sortField, sortDirection);
+  const sortedVouchers = $derived(
+    sortVouchers(vouchers, sortField, sortDirection)
+  );
 
   // Sorting function
   function sortVouchers(rows: VoucherWithDetails[], field: 'dv_no' | 'payee_name' | 'date' | null, direction: 'asc' | 'desc'): VoucherWithDetails[] {
@@ -160,31 +168,6 @@
     }
   }
 
-  // Delete Voucher Functions
-  async function deleteVoucher(voucher: VoucherWithDetails) {
-    const confirmMessage = `Are you sure you want to delete voucher ${voucher.dv_no} for ${voucher.payee_name}?\n\nThis action cannot be undone.`;
-    
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('vouchers')
-        .delete()
-        .eq('id', voucher.id);
-
-      if (error) throw error;
-
-      // Remove from local state
-      vouchers = vouchers.filter(v => v.id !== voucher.id);
-      
-      alert(`Voucher ${voucher.dv_no} has been successfully deleted.`);
-    } catch (error) {
-      console.error('Error deleting voucher:', error);
-      alert('Error deleting voucher. Please try again.');
-    }
-  }
 
   // Edit Voucher Functions
   function openEditModal(voucher: VoucherWithDetails) {
@@ -215,158 +198,12 @@
     };
   }
 
-  async function saveVoucherEdit() {
-    if (!editingVoucher) return;
-
-    try {
-      const { error } = await supabase
-        .from('vouchers')
-        .update({
-          dv_no: editForm.dv_no,
-          date: editForm.date,
-          gross: editForm.gross,
-          has_tax_deduction: editForm.has_tax_deduction,
-          particulars: editForm.particulars,
-          payment_mode: editForm.payment_mode,
-          remarks: editForm.remarks
-        })
-        .eq('id', editingVoucher.id);
-
-      if (error) throw error;
-
-      // Update local state
-      vouchers = vouchers.map(v => 
-        v.id === editingVoucher!.id 
-          ? { ...v, ...editForm }
-          : v
-      );
-
-      closeEditModal();
-      alert('Voucher updated successfully!');
-    } catch (error) {
-      console.error('Error updating voucher:', error);
-      alert('Error updating voucher. Please try again.');
-    }
+  async function changeProject(id: number) {
+    await goto(`?project=${id}`, {
+      invalidateAll: true
+    });
   }
 
-  // Load projects
-  async function load_projects() {
-    try {
-
-      const access = await getUserAccess();
-
-      if (!access) {
-        projects = [];
-        return;
-      }
-      
-      if (access.role == 'admin') {
-        // ADMIN
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, code, title, authorized_rep, approver')
-          .order('code');
-        
-        if (error) throw error;
-        projects = data ?? [];
-        
-        // Auto-select first project if available
-        if (projects.length > 0) {
-          selectedProjectId = projects[0].id;
-        }
-        return;
-      } else {
-        // User 
-        if (access.projectIds.length === 0) {
-          projects = [];
-          selectedProjectId = 0;
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, code, title, authorized_rep, approver')
-          .in('id', access.projectIds)
-          .order('code');
-
-        if (error) throw error;
-
-        projects = data ?? [];
-
-        if (projects.length > 0) {
-          selectedProjectId = projects[0].id;
-        }
-      }
-
-    } catch (error) {
-      console.error('Error loading projects:', error);
-      alert('Error loading projects');
-      projects = [];
-    }
-  }
-
-  // Load vouchers for selected project
-  async function load_vouchers() {
-    if (!selectedProjectId || selectedProjectId === 0) {
-      vouchers = [];
-      return;
-    }
-
-    loading = true;
-    try {
-      const { data, error } = await supabase
-        .from('vouchers')
-        .select(`
-          id,
-          dv_no,
-          date,
-          nth_yearly_voucher,
-          gross,
-          has_tax_deduction,
-          particulars,
-          payment_mode,
-          remarks,
-          payees!inner (
-            name,
-            address
-          )
-        `)
-        .eq('project_id', selectedProjectId)
-        .order('dv_no');
-      
-      if (error) throw error;
-      
-      // Transform the data to flatten the payee information
-      vouchers = (data ?? []).map((v: any) => ({
-        id: v.id,
-        dv_no: v.dv_no,
-        payee_name: v.payees?.name || 'Unknown',
-        payee_address: v.payees?.address || '',
-        date: v.date,
-        nth_yearly_voucher: v.nth_yearly_voucher,
-        gross: v.gross,
-        has_tax_deduction: v.has_tax_deduction,
-        particulars: v.particulars,
-        payment_mode: v.payment_mode,
-        remarks: v.remarks || ''
-      }));
-    } catch (error) {
-      console.error('Error loading vouchers:', error);
-      alert('Error loading vouchers');
-      vouchers = [];
-    } finally {
-      loading = false;
-    }
-  }
-
-  // Reactive loading when project changes
-  $: if (selectedProjectId) {
-    load_vouchers();
-  }
-
-  onMount(async () => {
-    await load_projects();
-  });
 </script>
 
 <div class="page-header">
@@ -374,7 +211,7 @@
   <span class="text-gray-600/70">|</span>
   <div class="project-selector">
     <label for="project-select" class="sr-only">Select Project</label>
-    <select id="project-select" class="project-select" bind:value={selectedProjectId}>
+    <select id="project-select" class="project-select" bind:value={selectedProjectId} onchange={(e) => changeProject(Number(e.currentTarget.value))}>
       <option value={0}>Select a project...</option>
       {#each projects as project}
         <option value={project.id}>{project.code} - {project.title}</option>
@@ -409,21 +246,21 @@
     </div>
   {:else}
     
-    <button class="pdf-button pdf-all" on:click={generateAllVouchersPDF}>
+    <button class="pdf-button pdf-all" onclick={generateAllVouchersPDF}>
       📄 Generate All Vouchers PDF
     </button>
     
     <table class="voucher-table border-2 border-green-800">
       <thead>
         <tr>
-          <th class="sortable-header" on:click={() => handleSort('dv_no')} title="Click to sort by DV Number">
+          <th class="sortable-header" onclick={() => handleSort('dv_no')} title="Click to sort by DV Number">
             DV No. <span class="sort-icon">{getSortIcon('dv_no')}</span>
           </th>
-          <th class="sortable-header" on:click={() => handleSort('payee_name')} title="Click to sort by Payee Name">
+          <th class="sortable-header" onclick={() => handleSort('payee_name')} title="Click to sort by Payee Name">
             Payee Name <span class="sort-icon">{getSortIcon('payee_name')}</span>
           </th>
           <th>Address</th>
-          <th class="sortable-header" on:click={() => handleSort('date')} title="Click to sort by Date">
+          <th class="sortable-header" onclick={() => handleSort('date')} title="Click to sort by Date">
             Date <span class="sort-icon">{getSortIcon('date')}</span>
           </th>
           <th>Nth Yearly</th>
@@ -453,15 +290,20 @@
             <td style="text-align: center;" class="payment-mode">{voucher.payment_mode}</td>
             <td style="text-align: center;" class="text-sm text-gray-600">{voucher.remarks}</td>
             <td class="actions">
-              <button class="pdf-button pdf-single" on:click={() => generateSingleVoucherPDF(voucher)} title="Generate PDF for this voucher">
+              <button class="pdf-button pdf-single" onclick={() => generateSingleVoucherPDF(voucher)} title="Generate PDF for this voucher">
                 📄 PDF
               </button>
-              <button class="edit-button" on:click={() => openEditModal(voucher)} title="Edit this voucher">
+              <button class="edit-button" onclick={() => openEditModal(voucher)} title="Edit this voucher">
                 ✏️ Edit
               </button>
-              <button class="delete-button delete-single" on:click={() => deleteVoucher(voucher)} title="Delete this voucher">
-                🗑️ Delete
-              </button>
+              <form method="POST" action="?/deleteVoucher">
+                <input type="hidden" name="id"
+                  value={voucher.id}
+                />
+                <button type="submit" class="delete-button delete-single">
+                  🗑️ Delete
+                </button>
+              </form>
             </td>
           </tr>
         {/each}
@@ -476,14 +318,30 @@
 
 <!-- Edit Modal -->
 {#if showEditModal && editingVoucher}
-  <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" on:click={closeEditModal} on:keydown={(e) => e.key === 'Escape' && closeEditModal()}>
-    <div class="modal-content" role="document" on:click|stopPropagation on:keydown|stopPropagation>
+  <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" tabindex="-1" onclick={closeEditModal} onkeydown={(e) => e.key === 'Escape' && closeEditModal()}>
+    <div
+      class="modal-content"
+      role="presentation"
+      onclick={(e) => {
+        e.stopPropagation();
+      }} 
+      onkeydown={(e) => {
+        e.stopPropagation();
+      }}
+    >
       <h2 id="edit-modal-title">Edit Voucher</h2>
-      <form on:submit|preventDefault={saveVoucherEdit}>
+      <form method="POST" action="?/updateVoucher">
         <div class="form-group">
+          <input
+            type="hidden"
+            name="id"
+            value={editingVoucher.id}
+          />
+
           <label for="edit-dv-no">DV Number:</label>
           <input 
             id="edit-dv-no"
+            name="dv_no"
             type="text" 
             bind:value={editForm.dv_no}
             required 
@@ -494,6 +352,7 @@
           <label for="edit-date">Date:</label>
           <input 
             id="edit-date"
+            name="date"
             type="date" 
             bind:value={editForm.date}
             required 
@@ -504,6 +363,7 @@
           <label for="edit-gross">Gross Amount:</label>
           <input 
             id="edit-gross"
+            name="gross"
             type="number" 
             step="0.01"
             bind:value={editForm.gross}
@@ -515,6 +375,7 @@
           <label for="edit-tax-deduction">
             <input 
               id="edit-tax-deduction"
+              name="has_tax_deductions"
               type="checkbox" 
               bind:checked={editForm.has_tax_deduction}
             />
@@ -526,6 +387,7 @@
           <label for="edit-particulars">Particulars:</label>
           <textarea 
             id="edit-particulars"
+            name="particulars"
             bind:value={editForm.particulars}
             rows="3"
             required
@@ -536,6 +398,7 @@
           <label for="edit-payment-mode">Payment Mode:</label>
           <input 
             id="edit-payment-mode"
+            name="payment_mode"
             type="text" 
             bind:value={editForm.payment_mode}
             required 
@@ -546,13 +409,14 @@
           <label for="edit-remarks">Remarks:</label>
           <textarea 
             id="edit-remarks"
+            name="remarks"
             bind:value={editForm.remarks}
             rows="2"
           ></textarea>
         </div>
 
         <div class="modal-buttons">
-          <button type="button" class="cancel-button" on:click={closeEditModal}>
+          <button type="button" class="cancel-button" onclick={closeEditModal}>
             Cancel
           </button>
           <button type="submit" class="save-button">
