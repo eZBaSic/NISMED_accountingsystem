@@ -174,26 +174,6 @@
     return convertToCSV([headers, ...rows]);
   }
 
-  function generateSummaryCSV(data: any): string {
-    const totalAmount = data.vouchers.reduce((sum: number, voucher: any) => sum + (voucher.gross || 0), 0);
-    const vouchersWithTax = data.vouchers.filter((v: any) => v.has_tax_deduction).length;
-    const vouchersWithoutTax = data.vouchers.length - vouchersWithTax;
-
-    const summaryData = [
-      ['Metric', 'Value'],
-      ['Export Date', new Date().toLocaleDateString('en-PH')],
-      ['Total Projects', data.projects.length],
-      ['Total Payees', data.payees.length],
-      ['Total Vouchers', data.vouchers.length],
-      ['Total Amount (PHP)', totalAmount.toFixed(2)],
-      ['Vouchers with Tax Deduction', vouchersWithTax],
-      ['Vouchers without Tax Deduction', vouchersWithoutTax],
-      ['Average Voucher Amount (PHP)', data.vouchers.length > 0 ? (totalAmount / data.vouchers.length).toFixed(2) : '0.00']
-    ];
-
-    return convertToCSV(summaryData);
-  }
-
   function convertToCSV(data: any[][]): string {
     return data.map(row => 
       row.map((field: any) => {
@@ -268,13 +248,6 @@
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon">💰</div>
-        <div class="stat-content">
-          <h3>Total Amount</h3>
-          <p class="stat-number stat-small">{formatCurrency(data.totalAmount)}</p>
-        </div>
-      </div>
     </div>
 
     <!-- Quick Navigation -->
@@ -457,7 +430,7 @@
 /* Navigation Grid */
 .navigation-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
   gap: 1.5rem;
 }
 
