@@ -5,9 +5,6 @@
   // Dashboard statistics
 	let { data }: { data: PageData } = $props();
 
-  // Loading states
-  let error: string | null = null;
-
   // CSV Export states
   let isExporting = $state(false);
   let exportProgress = $state(0);
@@ -49,7 +46,6 @@
     try {
       isExporting = true;
       exportProgress = 0;
-      error = null;
 
       // Step 1: Load all projects (20% progress)
       exportProgress = 20;
@@ -132,18 +128,6 @@
       project.tax || '',
       project.authorized_rep || '',
       project.approver || ''
-    ]);
-
-    return convertToCSV([headers, ...rows]);
-  }
-
-  function generatePayeesCSV(payees: any[]): string {
-    const headers = ['ID', 'Name', 'Address', 'TIN ID'];
-    const rows = payees.map(payee => [
-      payee.id,
-      payee.name,
-      payee.address || '',
-      payee.tin_id || ''
     ]);
 
     return convertToCSV([headers, ...rows]);

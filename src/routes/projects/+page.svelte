@@ -7,7 +7,14 @@
 	}>();
 
 	const summaries = props.data.summaries;
-	const role = props.data.role;
+
+  // Format currency
+  function formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP'
+    }).format(amount);
+  }
 
 	let show_add_modal = $state(false);
 	let show_edit_modal = $state(false);
@@ -194,8 +201,8 @@
         <td>{s.approver}</td>
         <td>{s.admin_officer}</td>
         <td>{s.total_vouchers}</td>
-        <td>{s.gross_total}</td>
-        <td>{s.net_total}</td>
+        <td>{formatCurrency(s.gross_total)}</td>
+        <td>{formatCurrency(s.net_total)}</td>
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <td class="space-x-3">
           <!-- svelte-ignore a11y_click_events_have_key_events -->
