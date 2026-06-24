@@ -116,8 +116,9 @@ export async function generateProjectTaxPDF(    // UPDATE NEEDED: Case where a n
     taxed += voucher.taxed_amount;
     net += voucher.net_amount;
 
+    doc.setFont("Times", "normal");
     doc.setFontSize(9);
-    name = doc.splitTextToSize(`${voucher.payee_name}`, 46).length - 1; // Case where name is longer than cell
+    name = doc.splitTextToSize(`${voucher.payee_name}`, 42).length - 1; // Case where name is longer than cell
     console.log(voucher.payee_name)
     console.log(name);
 
@@ -205,12 +206,11 @@ function generateProjectTaxPage( doc: any, voucherData: ProjectTaxPDFData, row: 
   const grossFormatted = formatCurrency(gross);
   const taxFormatted = formatCurrency(taxed_amount);
   const netFormatted = formatCurrency(net_amount);
-
-  const name = doc.splitTextToSize(`${payee_name}`, 42)
   
-
     doc.setFont("Times", "normal");
     doc.setFontSize(9);
+
+    const name = doc.splitTextToSize(`${payee_name}`, 42)
 
     doc.rect(10, row, 23, 8 + size*8);
     doc.text(date, 12, row + 6);

@@ -340,7 +340,7 @@ export async function generateVoucherPDF(voucherData: VoucherPDFData): Promise<v
   doc.setFontSize(8);
   doc.text("Signature over Printed Name", 152.5, receiptY + 64, { align: "center" });
   doc.text("of Payee", 152.5, receiptY + 68, { align: "center" });
-  doc.text(`Date: ${currentDate}`, 152.5, receiptY + 72, { align: "center" });
+  doc.text(`Date: ${formattedDate}`, 152.5, receiptY + 72, { align: "center" });
 
   // Main border
   doc.rect(10, 10, 190, 240 + addY);
@@ -416,7 +416,7 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
     year: '2-digit' 
   }).replace(/ /g, '-');
 
-    const currentDate = new Date().toLocaleDateString('en-GB', { 
+  const currentDate = new Date().toLocaleDateString('en-GB', { 
     day: 'numeric', 
     month: 'short', 
     year: '2-digit' 
@@ -636,7 +636,7 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
   doc.setFontSize(8);
   doc.text("Signature over Printed Name", 152.5, receiptY + 64, { align: "center" });
   doc.text("of Payee", 152.5, receiptY + 68, { align: "center" });
-  doc.text(`Date: ${currentDate}`, 152.5, receiptY + 72, { align: "center" });
+  doc.text(`Date: ${formattedDate}`, 152.5, receiptY + 72, { align: "center" });
 
   // Main border
   doc.rect(10, 10, 190, 240 + addY);
