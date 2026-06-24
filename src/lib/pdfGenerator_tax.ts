@@ -126,6 +126,7 @@ export async function generateProjectTaxPDF(    // UPDATE NEEDED: Case where a n
     if (index === 0 || ((name*8)+row) >= 184) {
       // HEADER
         if (((name*8)+row) >= 184){
+            doc.rect(10, 10, 277, 190);
             row = 35;
             doc.addPage();
         }
@@ -264,6 +265,8 @@ export async function generateYearlyTaxPDF(yearly: YearlyTaxPDFData[], Year: num
     if (index == 0 || ((name*8)+row) >= 279) {
         // Header
         if (((name*8)+row) >= 279){
+            // Outer Border
+            doc.rect(10, 10, 190, 277);
             row = 35;
             doc.addPage();
         }
