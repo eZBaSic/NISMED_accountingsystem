@@ -20,9 +20,12 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// role
 	const { data: profile } = await supabase
 		.from('profiles')
-		.select('role')
+		.select('first_name, last_name, role')
 		.eq('id', user.id)
 		.single();
+
+	const firstName = profile?.first_name?.toLowerCase() ?? '';
+	const lastName = profile?.last_name?.toLowerCase() ?? '';
 
 	let projects = [];
 
@@ -42,7 +45,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			.eq('user_id', user.id);
 
 		const projectIds =
-			userProjects?.map((p) => p.project_id) ?? [];
+			userProjects?.map((p: any) => p.project_id) ?? [];
 
 		if (projectIds.length) {
 			const { data } = await supabase
@@ -82,22 +85,53 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			.eq('project_id', selectedProjectId)
 			.order('dv_no');
 
-		vouchers =
-			data?.map((v: any) => ({
-				id: v.id,
-				dv_no: v.dv_no,
-				payee_name: v.payees?.name ?? '',
-				payee_address: v.payees?.address ?? '',
-				date: v.date,
-				nth_yearly_voucher:
-					v.nth_yearly_voucher,
-				gross: v.gross,
-				has_tax_deduction:
-					v.has_tax_deduction,
-				particulars: v.particulars,
-				payment_mode: v.payment_mode,
-				remarks: v.remarks ?? ''
-			})) ?? [];
+		if (profile?.role === 'admin') {			
+			vouchers =
+				data?.map((v: any) => ({
+					id: v.id,
+					dv_no: v.dv_no,
+					payee_name: v.payees?.name ?? '',
+					payee_address: v.payees?.address ?? '',
+					date: v.date,
+					nth_yearly_voucher:
+						v.nth_yearly_voucher,
+					gross: v.gross,
+					has_tax_deduction:
+						v.has_tax_deduction,
+					particulars: v.particulars,
+					payment_mode: v.payment_mode,
+					remarks: v.remarks ?? ''
+				})) ?? [];
+
+		} else {
+			if (firstName != '' || lastName != '') {
+				vouchers =
+				data?.
+				filter((v: any) => {
+					const name = v.payees?.name?.toLowerCase() ?? '';
+
+					return (
+						name.includes(firstName) && name.includes(lastName)
+					);
+				})
+				.map((v: any) => ({
+					id: v.id,
+					dv_no: v.dv_no,
+					payee_name: v.payees?.name ?? '',
+					payee_address: v.payees?.address ?? '',
+					date: v.date,
+					nth_yearly_voucher:
+						v.nth_yearly_voucher,
+					gross: v.gross,
+					has_tax_deduction:
+						v.has_tax_deduction,
+					particulars: v.particulars,
+					payment_mode: v.payment_mode,
+					remarks: v.remarks ?? ''
+				})) ?? [];
+			}
+		}
+		
 	}
 
 	return {
