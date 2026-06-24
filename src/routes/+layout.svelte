@@ -39,7 +39,8 @@
           {href: "/dashboard", title: "Dashboard"},
           {href: "/vouchers", title: "Vouchers"},
           {href: "/projects", title: "Projects"},
-          {href: "/reports", title: "Reports"}, 
+          {href: "/reports", title: "Reports"},
+          {href: "/taxes", title: "Taxes"}, 
         ] as {href, title}}
             <a href={href} class={`hover:text-green-200 ${`hover:bg-green-800`} px-5 py-3 transition-colors font-semibold rounded-full ${page.url.pathname.startsWith(href) ? `bg-green-800` : ''}`}>{title}</a>
         {/each}
