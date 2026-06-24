@@ -9,6 +9,8 @@
 		id: string;
 		email: string;
 		role: string;
+		first_name: string;
+		last_name: string;
 		projectIds: number[];
 	} | null>(null);
 
@@ -26,6 +28,8 @@
 			id: user.id,
 			email: user.email,
 			role: user.role,
+			first_name: user.first_name,
+			last_name: user.last_name,
 			projectIds: getUserProjectIds(user.id) ?? []
 		};
 
@@ -129,7 +133,27 @@
 				/>
 
 				<div class="form-group">
-					<label>Email</label>
+					<label for="first_name">First Name</label>
+
+					<input
+						name="first_name"
+						bind:value={selectedUser.first_name}
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<label for="last_name">Last Name</label>
+
+					<input
+						name="last_name"
+						bind:value={selectedUser.last_name}
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<label for="email">Email</label>
 
 					<input
 						name="email"
@@ -138,7 +162,7 @@
 				</div>
 
 				<div class="form-group">
-					<label>Role</label>
+					<label for="role">Role</label>
 
 					<select
 						name="role"
@@ -155,7 +179,7 @@
 				</div>
 
 				<div class="form-group">
-					<label>
+					<label for="project-list">
 						Assigned Projects
 					</label>
 
