@@ -1,26 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { supabase } from "$lib/supabaseClient";
+  import type { PageData } from './$types';
 
   // Dashboard statistics
-  let totalProjects = 0;
-  let totalVouchers = 0;
-  let totalAmount = 0;
-  let recentActivity: Array<{
-    type: 'voucher' | 'project';
-    title: string;
-    date: string;
-    amount?: number;
-  }> = [];
-  let role: string | null = null;
+	let { data }: { data: PageData } = $props();
 
   // Loading states
-  let isLoading = true;
   let error: string | null = null;
 
   // CSV Export states
-  let isExporting = false;
-  let exportProgress = 0;
+  let isExporting = $state(false);
+  let exportProgress = $state(0);
 
   // Quick navigation items
   const navigationItems = [
@@ -46,135 +36,6 @@
       color: 'purple'
     }
   ];
-
-  // Load dashboard data
-  async function loadDashboardData() {
-    try {
-      isLoading = true;
-      error = null;
-
-      // Get current user
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('User not logged in')
-      }
-
-      // Get User Role
-      const { data: profile, error: userRoleError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      if (userRoleError) {
-        throw userRoleError;
-      }
-      role = profile?.role ?? 'user';
-
-      if (role == 'user') {
-        // Get projects assigned to user
-        const { data: userProjects, error: userProjectsError } = await supabase
-          .from('user_projects')
-          .select('project_id')
-          .eq('user_id', user.id);
-        if (userProjectsError) {
-          throw userProjectsError;
-        }
-
-        const projectIds = userProjects?.map(up => up.project_id) ?? [];
-        if (projectIds.length === 0) {
-          return;
-        }
-      
-        // Load only assigned projects
-        const { data: projects, error: projectsError } =
-        await supabase
-          .from('projects')
-          .select('*')
-          .in('id', projectIds);
-
-        if (projectsError) throw projectsError;
-
-        totalProjects = projects?.length ?? 0;
-
-        // Load vouchers only for assigned projects
-        const { data: vouchers, error: vouchersError } =
-          await supabase
-            .from('vouchers')
-            .select(`
-              *,
-              payees(name),
-              projects(title, code)
-            `)
-            .in('project_id', projectIds)
-            .order('date', { ascending: false });
-
-        if (vouchersError) throw vouchersError;
-
-        totalVouchers = vouchers?.length ?? 0;
-
-        totalAmount =
-          vouchers?.reduce(
-            (sum, voucher) => sum + (voucher.gross || 0),
-            0
-          ) ?? 0;
-        
-        // Create recent activity from recent vouchers
-        recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
-          type: 'voucher' as const,
-          title: `${voucher.dv_no} - ${voucher.payees?.name}`,
-          date: voucher.date,
-          amount: voucher.gross
-        }));
-      } else {
-        // Admin, show all
-        // Load projects count
-        const { data: projects, error: projectsError } = await supabase
-          .from('projects')
-          .select('*');
-
-        if (projectsError) throw projectsError;
-        totalProjects = projects?.length || 0;
-
-        // Load vouchers data
-        const { data: vouchers, error: vouchersError } = await supabase
-          .from('vouchers')
-          .select(`
-            *,
-            payees(name),
-            projects(title, code)
-          `)
-          .order('date', { ascending: false });
-
-        if (vouchersError) throw vouchersError;
-        
-        totalVouchers = vouchers?.length || 0;
-        totalAmount = vouchers?.reduce((sum, voucher) => sum + (voucher.gross || 0), 0) || 0;
-
-        // Create recent activity from recent vouchers
-        recentActivity = (vouchers?.slice(0, 5) || []).map(voucher => ({
-          type: 'voucher' as const,
-          title: `${voucher.dv_no} - ${voucher.payees?.name}`,
-          date: voucher.date,
-          amount: voucher.gross
-        }));
-      }
-
-      
-
-    } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      error = 'Failed to load dashboard data. Please try again.';
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  onMount(() => {
-    loadDashboardData();
-  });
 
   // CSV Export Functions
   async function exportAllData() {
@@ -382,26 +243,13 @@
     <p class="page-subtitle">Welcome to the NISMED Accounting System</p>
   </div>
 
-  {#if error}
-    <div class="error-message">
-      <p>{error}</p>
-      <button on:click={loadDashboardData} class="retry-button">
-        🔄 Retry
-      </button>
-    </div>
-  {:else if isLoading}
-    <div class="loading">
-      <div class="spinner"></div>
-      <p>Loading dashboard...</p>
-    </div>
-  {:else}
     <!-- Statistics Cards -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">📁</div>
         <div class="stat-content">
           <h3>Total Projects</h3>
-          <p class="stat-number">{totalProjects}</p>
+          <p class="stat-number">{data.totalProjects}</p>
         </div>
       </div>
 
@@ -409,7 +257,7 @@
         <div class="stat-icon">📄</div>
         <div class="stat-content">
           <h3>Total Vouchers</h3>
-          <p class="stat-number">{totalVouchers}</p>
+          <p class="stat-number">{data.totalVouchers}</p>
         </div>
       </div>
 
@@ -417,7 +265,7 @@
         <div class="stat-icon">💰</div>
         <div class="stat-content">
           <h3>Total Amount</h3>
-          <p class="stat-number stat-small">{formatCurrency(totalAmount)}</p>
+          <p class="stat-number stat-small">{formatCurrency(data.totalAmount)}</p>
         </div>
       </div>
     </div>
@@ -442,9 +290,9 @@
     <!-- Recent Activity -->
     <div class="section">
       <h2>Recent Activity</h2>
-      {#if recentActivity.length > 0}
+      {#if data.recentActivity.length > 0}
         <div class="activity-list">
-          {#each recentActivity as activity}
+          {#each data.recentActivity as activity}
             <div class="activity-item">
               <div class="activity-icon">
                 {#if activity.type === 'voucher'}📄{:else}📁{/if}
@@ -468,7 +316,7 @@
       {/if}
     </div>
     
-    {#if role == 'admin'}
+    {#if data.role == 'admin'}
       <!-- Data Export -->
       <div class="section">
         <h2>Data Export</h2>
@@ -498,7 +346,7 @@
                 <p class="progress-text">Exporting data... {exportProgress}%</p>
               </div>
             {:else}
-              <button class="export-button" on:click={exportAllData}>
+              <button class="export-button" onclick={exportAllData}>
                 📥 Export Data
               </button>
             {/if}
@@ -506,7 +354,6 @@
         </div>
       </div>
     {/if}
-  {/if}
 </div>
 
 <style>
@@ -532,57 +379,6 @@
   font-size: 1.25rem;
   color: #6b7280;
   margin: 0;
-}
-
-/* Loading and Error States */
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  color: #6b7280;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.error-message {
-  text-align: center;
-  padding: 2rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 0.5rem;
-  color: #dc2626;
-  margin-bottom: 2rem;
-}
-
-.retry-button {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-weight: 600;
-  margin-top: 1rem;
-  transition: background-color 0.2s;
-}
-
-.retry-button:hover {
-  background: #b91c1c;
 }
 
 /* Statistics Grid */

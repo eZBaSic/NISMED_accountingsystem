@@ -1,229 +1,75 @@
 <script lang="ts">
-  // ===============
-  // onMount actions
-  // ===============
-  
-  import { show, getUserAccess } from '$lib/helpers';
-  import { onMount } from 'svelte';
-  onMount(async () => {
-    await load_summaries()
-  })
-
-  //
-  // load summaries
-  //
-
-  let summaries: summary[] = []
-  import { supabase } from "$lib/supabaseClient";
+	import type { PageData } from './$types';
 	import RedAsterisk from '$lib/components/RedAsterisk.svelte';
 
-  async function load_summaries() {
-    try {
+	const props = $props<{
+		data: PageData;
+	}>();
 
-      const access = await getUserAccess();
+	const summaries = props.data.summaries;
+	const role = props.data.role;
 
-      if (access?.role == 'admin') {
-        // ADMIN
-        const { data, error } = await supabase
-          .from("summaries")
-          .select();
+	let show_add_modal = $state(false);
+	let show_edit_modal = $state(false);
+	let show_delete_modal = $state(false);
 
-        if (error) throw error
-        summaries = data ?? []
-        return;
-      } else {
-        // USER -> assigned projects only
-        const projectIds = access?.projectIds;
+	let delete_project_id = $state<number | undefined>();
+	let delete_project_title = $state('');
 
-        if (!projectIds || projectIds.length === 0) {
-          summaries = [];
-          return;
-        }
+	let project_form = $state<project>({
+		code: '',
+		title: '',
+		tax: 10,
+		authorized_rep: '',
+		approver: '',
+		admin_officer: ''
+	});
 
-        const { data, error } = await supabase
-          .from('summaries')
-          .select()
-          .in('project_id', projectIds);
+	let edit_form = $state<project>({
+		id: undefined,
+		code: '',
+		title: '',
+		tax: 0,
+		authorized_rep: '',
+		approver: '',
+		admin_officer: ''
+	});
 
-        if (error) throw error;
-        summaries = data ?? [];
-        return;
-      }
+	function open_add_modal() {
+		show_add_modal = true;
+	}
 
+	function close_add_modal() {
+		show_add_modal = false;
+	}
 
-    } catch (error) { 
-      alert(`error loading database`)
-      // show(`error loading database\n${JSON.stringify(error)}`)
-      summaries = [] 
-    } finally {
-      // show(summaries)
-    }
-  }
+	function open_edit_modal(s: summary) {
+		edit_form = {
+			id: s.project_id,
+			code: s.code,
+			title: s.title,
+			tax: s.tax,
+			authorized_rep: s.authorized_rep,
+			approver: s.approver,
+			admin_officer: s.admin_officer
+		};
 
-  //
-  // add project
-  //
+		show_edit_modal = true;
+	}
 
-  // Renamed variables to snake_case for consistency
-  let show_add_modal = false;
-  let project_form: project = {
-    code: '',
-    title: '',
-    tax: 10,
-    authorized_rep: '',
-    approver: '',
-    admin_officer: ''
-  };
+	function close_edit_modal() {
+		show_edit_modal = false;
+	}
 
-  async function add_project(new_project: project) {    
-    try {
+	function open_delete_modal(s: summary) {
+		delete_project_id = s.project_id;
+		delete_project_title = s.title;
+		show_delete_modal = true;
+	}
 
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('User not logged in');
-      }
-
-      const { data: projectData, error: projectError } = await supabase
-        .from("projects")
-        .insert(new_project)
-        .select()
-        .single();
-
-      if (projectError) throw projectError
-
-      const { error: accessError } = await supabase
-        .from('user_projects')
-        .insert({
-          user_id: user.id,
-          project_id: projectData.id
-        });
-
-      if (accessError) throw accessError;
-      
-      alert("project added succesfully")
-    } catch (error) {
-      alert("error inserting to database")
-    }
-  }
-
-  function open_add_modal() {
-    show_add_modal = true;
-  }
-  function close_add_modal() {
-    show_add_modal = false;
-  }
-  async function handle_create_project() {
-    await add_project(project_form);
-    close_add_modal();
-    await load_summaries();
-    // Reset form
-    project_form = {
-      code: '',
-      title: '',
-      tax: 0,
-      authorized_rep: '',
-      approver: '',
-      admin_officer: ''
-    };
-  }
-
-  // Edit Project Modal
-  let show_edit_modal = false;
-  let edit_form: project = {
-    code: '',
-    id: undefined,
-    title: '',
-    tax: 0,
-    authorized_rep: '',
-    approver: '',
-    admin_officer: ''
-  };
-
-  function open_edit_modal(s: summary) {
-    edit_form.code = s.code
-    edit_form.id = s.project_id
-    edit_form.title = s.title
-    edit_form.authorized_rep = s.authorized_rep
-    edit_form.approver = s.approver
-    edit_form.admin_officer = s.admin_officer
-    edit_form.tax = s.tax
-
-    show_edit_modal = true;
-  }
-  
-  function close_edit_modal() {
-    show_edit_modal = false;
-  }
-
-  async function handle_edit_project() {
-    try {
-      // alert(edit_form.project_id)
-      const { data, error } = await supabase
-        .from("projects")
-        .update({
-          code: edit_form.code,
-          title: edit_form.title,
-          tax: edit_form.tax,
-          authorized_rep: edit_form.authorized_rep,
-          approver: edit_form.approver,
-          admin_officer: edit_form.admin_officer
-        })
-        .eq('id', edit_form.id);
-      if (error) throw error;
-      alert("project updated successfully");
-      close_edit_modal();
-      await load_summaries();
-    } catch (error) {
-      alert("error updating project");
-    }
-  }
-
-  // Delete Project Modal
-  let show_delete_modal = false;
-  let delete_project_id: number | undefined = undefined;
-  let delete_project_title: string = '';
-
-  function open_delete_modal(s: summary) {
-    delete_project_id = s.project_id;
-    delete_project_title = s.title;
-    show_delete_modal = true;
-  }
-  function close_delete_modal() {
-    show_delete_modal = false;
-    delete_project_id = undefined;
-    delete_project_title = '';
-  }
-  async function handle_delete_project() {
-    if (delete_project_id === undefined) return;
-    try {
-      const { error } = await supabase
-        .from("projects") 
-        .delete()
-        .eq('id', delete_project_id);
-      if (error) throw error;
-      alert("Project deleted successfully");
-      close_delete_modal();
-      await load_summaries();
-    } catch (error) {
-      alert("Error deleting project");
-    }
-  }
-
-  // id is auto generated by the database, it should not be a parameter when inserting
-  // it should be used, however, to uniquely identify a project
-  // interface project {
-	// 	code: string,
-	// 	id?: number,
-	// 	title: string,
-	// 	tax: number,	
-	// 	authorized_rep: string,
-	// 	approver: string,
-	// 	admin_officer: string,
-	// }
-
+	function close_delete_modal() {
+		show_delete_modal = false;
+	}
 </script>
 
 
@@ -231,7 +77,7 @@
 <div class="page-header">
   <h1 class="page-title">Projects</h1>
   <span class="text-gray-600/70">|</span>
-  <button class="add-project-btn" on:click={open_add_modal}>
+  <button class="add-project-btn" onclick={open_add_modal}>
     + Add Project
   </button>
 </div>
@@ -239,30 +85,30 @@
 {#if show_add_modal}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="modal-backdrop" on:click={close_add_modal}></div>
+  <div class="modal-backdrop" onclick={close_add_modal}></div>
   <div class="modal">
     <h2 class="modal-title">Add New Project</h2>
-    <form on:submit|preventDefault={handle_create_project}>
+    <form method="POST" action="?/createProject">
       <label>Code<RedAsterisk />
-        <input type="text" bind:value={project_form.code} required />
+        <input name="code" type="text" bind:value={project_form.code} required />
       </label>
       <label>Title<RedAsterisk />
-        <input type="text" bind:value={project_form.title} required />
+        <input name="title" type="text" bind:value={project_form.title} required />
       </label>
       <label>Tax (%)<RedAsterisk />
-        <input type="number" bind:value={project_form.tax} min="0" step="1" required />
+        <input name="tax" type="number" bind:value={project_form.tax} min="0" step="1" required />
       </label>
       <label>Authorized Rep<RedAsterisk />
-        <input type="text" bind:value={project_form.authorized_rep} required />
+        <input name="authorized_rep" type="text" bind:value={project_form.authorized_rep} required />
       </label>
       <label>Approver<RedAsterisk />
-        <input type="text" bind:value={project_form.approver} required />
+        <input name="approver" type="text" bind:value={project_form.approver} required />
       </label>
       <label>Admin Officer
-        <input type="text" bind:value={project_form.admin_officer} />
+        <input name="admin_officer" type="text" bind:value={project_form.admin_officer} />
       </label>
       <div class="modal-actions">
-        <button type="button" class="modal-cancel" on:click={close_add_modal}>Cancel</button>
+        <button type="button" class="modal-cancel" onclick={close_add_modal}>Cancel</button>
         <button type="submit" class="modal-submit">Create</button>
       </div>
     </form>
@@ -272,30 +118,31 @@
 {#if show_edit_modal}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="modal-backdrop" on:click={close_edit_modal}></div>
+  <div class="modal-backdrop" onclick={close_edit_modal}></div>
   <div class="modal">
     <h2 class="modal-title">Edit Project</h2>
-    <form on:submit|preventDefault={handle_edit_project}>
+    <form method="POST" action="?/updateProject">
+      <input type="hidden" name="id" value={edit_form.id}/>
       <label>Code
-        <input type="text" bind:value={edit_form.code} required />
+        <input name="code" type="text" bind:value={edit_form.code} required />
       </label>
       <label>Title
-        <input type="text" bind:value={edit_form.title} required />
+        <input name="title" type="text" bind:value={edit_form.title} required />
       </label>
       <label>Tax (%)
-        <input type="number" bind:value={edit_form.tax} min="0" step="0.01" required />
+        <input name="tax" type="number" bind:value={edit_form.tax} min="0" step="0.01" required />
       </label>
       <label>Authorized Rep
-        <input type="text" bind:value={edit_form.authorized_rep} required />
+        <input name="authorized_rep" type="text" bind:value={edit_form.authorized_rep} required />
       </label>
       <label>Approver
-        <input type="text" bind:value={edit_form.approver} required />
+        <input name="approver" type="text" bind:value={edit_form.approver} required />
       </label>
       <label>Admin Officer
-        <input type="text" bind:value={edit_form.admin_officer} required />
+        <input name="admin_officer" type="text" bind:value={edit_form.admin_officer} required />
       </label>
       <div class="modal-actions">
-        <button type="button" class="modal-cancel" on:click={close_edit_modal}>Cancel</button>
+        <button type="button" class="modal-cancel" onclick={close_edit_modal}>Cancel</button>
         <button type="submit" class="modal-submit">Save</button>
       </div>
     </form>
@@ -305,13 +152,19 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 {#if show_delete_modal}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="modal-backdrop" on:click={close_delete_modal}></div>
+  <div class="modal-backdrop" onclick={close_delete_modal}></div>
   <div class="modal">
     <h2 class="modal-title">Delete Project</h2>
     <p>Are you sure you want to delete the project <b>{delete_project_title}</b>? This action cannot be undone.</p>
     <div class="modal-actions">
-      <button type="button" class="modal-cancel" on:click={close_delete_modal}>Cancel</button>
-      <button type="button" class="modal-submit" on:click={handle_delete_project}>Delete</button>
+      <button type="button" class="modal-cancel" onclick={close_delete_modal}>Cancel</button>
+      <form method="POST" action="?/deleteProject">
+        <input type="hidden" name="id" value={delete_project_id}/>
+
+        <button type="submit" class="modal-submit">
+          Delete
+        </button>
+      </form>
     </div>
   </div>
 {/if}
@@ -347,9 +200,9 @@
         <td class="space-x-3">
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <span class="text-blue-500 hover:underline cursor-pointer" on:click={() => open_edit_modal(s)}>Edit</span>
+          <span class="text-blue-500 hover:underline cursor-pointer" onclick={() => open_edit_modal(s)}>Edit</span>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <span class="text-red-500 hover:underline cursor-pointer" on:click={() => open_delete_modal(s)}>Delete</span>
+          <span class="text-red-500 hover:underline cursor-pointer" onclick={() => open_delete_modal(s)}>Delete</span>
         </td>
       </tr>
     {/each}
