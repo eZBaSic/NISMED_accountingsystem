@@ -34,6 +34,13 @@
       icon: '📊',
       href: '/reports',
       color: 'purple'
+    },
+    {
+      title: 'Taxes',
+      description: 'View summary of taxes and generate PDFs',
+      icon: '💲',
+      href: '/taxes',
+      color: 'red'
     }
   ];
 
