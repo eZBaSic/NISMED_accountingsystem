@@ -5,6 +5,27 @@
 	</div>
 
 	<form method="POST" class="user-form">
+	<div class="form-group">
+		<label for="first_name">First Name</label>
+		<input
+			id="first_name"
+			type="text"
+			name="first_name"
+			placeholder="Juan"
+			required
+		/>
+	</div>
+
+	<div class="form-group">
+		<label for="last_name">Last Name</label>
+		<input
+			id="last_name"
+			type="text"
+			name="last_name"
+			placeholder="Dela Cruz"
+			required
+		/>
+	</div>
 		<div class="form-group">
 			<label for="email">Email</label>
 			<input

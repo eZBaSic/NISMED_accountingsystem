@@ -33,6 +33,15 @@ export const actions = {
 		const userId = formData.get('userId');
 		const email = formData.get('email');
 		const role = formData.get('role');
+		const first_name = formData
+			.get('first_name')
+			?.toString()
+			.trim();
+
+		const last_name = formData
+			.get('last_name')
+			?.toString()
+			.trim();
 
 		const projectIds =
 			formData.getAll('projectIds');
@@ -40,6 +49,8 @@ export const actions = {
 		await supabaseAdmin
 			.from('profiles')
 			.update({
+				first_name,
+				last_name,
 				email,
 				role
 			})

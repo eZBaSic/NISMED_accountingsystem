@@ -8,8 +8,10 @@ export const actions = {
 		const email = formData.get('email')?.toString();
 		const password = formData.get('password')?.toString();
 		const role = formData.get('role')?.toString() ?? 'user';
+		const first_name = formData.get('first_name')?.toString().trim();
+		const last_name = formData.get('last_name')?.toString().trim();
 
-		if (!email || !password) {
+		if (!email || !password || !first_name || !last_name) {
 			return fail(400, {
 				message: 'Missing fields'
 			});
@@ -19,7 +21,11 @@ export const actions = {
 			await supabaseAdmin.auth.admin.createUser({
 				email,
 				password,
-				email_confirm: true
+				email_confirm: true,
+				user_metadata: {
+					first_name,
+					last_name
+				}
 			});
 
 		if (error) {
@@ -31,7 +37,7 @@ export const actions = {
 		const { error: updateError } =
 			await supabaseAdmin
 				.from('profiles')
-				.update({ role })
+				.update({ first_name, last_name, role })
 				.eq('id', data.user.id);
 
 		if (updateError) {
