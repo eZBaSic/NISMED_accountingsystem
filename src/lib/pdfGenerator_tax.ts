@@ -121,9 +121,15 @@ export async function generateProjectTaxPDF(    // UPDATE NEEDED: Case where a n
     name = doc.splitTextToSize(`${voucher.payee_name}`, 42).length - 1; // Case where name is longer than cell
     console.log(voucher.payee_name)
     console.log(name);
+    console.log(row)
 
-    if (index === 0) {
+    if (index === 0 || ((name*8)+row) >= 184) {
       // HEADER
+        if (((name*8)+row) >= 184){
+            row = 35;
+            doc.addPage();
+        }
+
       doc.setFont("Times", "bold");
       doc.setFontSize(12);
 
@@ -141,27 +147,26 @@ export async function generateProjectTaxPDF(    // UPDATE NEEDED: Case where a n
         { align: "center" }
       );
         doc.rect(10, 35, 23, 8);
-        doc.text("Date Paid", 12, row + 6);
+        doc.text("Date Paid", 12, 41);
         doc.rect(33, 35, 35, 8);
-        doc.text("DV No.", 35, row + 6);
+        doc.text("DV No.", 35, 41);
         doc.rect(68, 35, 46, 8);
-        doc.text("Particulars", 70, row + 6);
+        doc.text("Particulars", 70, 41);
         doc.rect(114, 35, 34, 8);
-        doc.text("TIN No.", 116, row + 6);
+        doc.text("TIN No.", 116, 41);
         doc.rect(148, 35, 35, 8);
-        doc.text("Gross", 150, row + 6);
+        doc.text("Gross", 150, 41);
         doc.rect(183, 35, 35, 8);
-        doc.text("Tax (10%)", 185, row + 6);
+        doc.text("Tax (10%)", 185, 41);
         doc.rect(218, 35, 34, 8);
-        doc.text("Net Amount", 220, row + 6);
+        doc.text("Net Amount", 220, 41);
         doc.rect(252, 35, 35, 8);
-        doc.text("Remarks", 254, row + 6);
+        doc.text("Remarks", 254, 41);
       
     }
 
     // MOVE DOWN
     row += 8;
-
     generateProjectTaxPage(doc, voucher, row, name);
     row += name*8;
   });
@@ -242,36 +247,45 @@ export async function generateYearlyTaxPDF(yearly: YearlyTaxPDFData[], Year: num
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let row = 35;
+  let row = 271;
   let gross = 0;
   let taxed = 0;
   let net = 0;
+  let name = 0;
   // Generate each voucher on a new page
   yearly.forEach((project, index) => {
     gross += project.gross;
     taxed += project.taxed_amount;
     net += project.net_amount;
 
-    if (index == 0) {
+    doc.setFont("Times", "normal");
+    name = doc.splitTextToSize(`${project.project_code}`, 56).length - 1;
+
+    if (index == 0 || ((name*8)+row) >= 279) {
         // Header
+        if (((name*8)+row) >= 279){
+            row = 35;
+            doc.addPage();
+        }
         doc.setFont("Times", "bold");
         doc.setFontSize(12);
         doc.text("Foundation for the Promotion of Science and Mathematics Education and Research, Inc.", 105, 20, { align: "center" });
         doc.text(`ANNUAL SUMMARY OF TAXES (${Year})`, 105, 28, { align: "center" });
 
-        doc.rect(10, row, 60, 8);
-        doc.text("Project Code", 12, row+6);
-        doc.rect(70, row, 43, 8);
-        doc.text("Gross", 72, row+6);
-        doc.rect(113, row, 43, 8);
-        doc.text("Taxed Amount", 115, row+6);
-        doc.rect(156, row, 44, 8);
-        doc.text("Net Amount", 158, row+6);
+        doc.rect(10, 35, 60, 8);
+        doc.text("Project Code", 12, 41);
+        doc.rect(70, 35, 43, 8);
+        doc.text("Gross", 72, 41);
+        doc.rect(113, 35, 43, 8);
+        doc.text("Taxed Amount", 115, 41);
+        doc.rect(156, 35, 44, 8);
+        doc.text("Net Amount", 158, 41);
     }
 
     // Use the same generation logic as single voucher
     row += 8;
-    generateAnnualTaxPage(doc, project, String(Year), row);
+    generateAnnualTaxPage(doc, project, String(Year), row, name);
+    row += name*8;
   });
 
   row += 16;
@@ -286,13 +300,13 @@ export async function generateYearlyTaxPDF(yearly: YearlyTaxPDFData[], Year: num
   doc.text(formatCurrency(net), 158, row+6);
 
   // Outer Border
-  doc.rect(10, 10, 190, 240);
+  doc.rect(10, 10, 190, 277);
 
   // Save PDF
   doc.save(`Annual_SummaryOfTaxes_${String(Year)}.pdf`);
 }
 
-function generateAnnualTaxPage(doc: any, yearlyData: YearlyTaxPDFData, Year: string, row: number): void {
+function generateAnnualTaxPage(doc: any, yearlyData: YearlyTaxPDFData, Year: string, row: number, size: number): void {
   const {
     project_code,
     gross,
@@ -306,13 +320,13 @@ function generateAnnualTaxPage(doc: any, yearlyData: YearlyTaxPDFData, Year: str
   const netFormatted = formatCurrency(net_amount);
 
   doc.setFont("Times", "normal");
-  doc.rect(10, row, 60, 8);
+  doc.rect(10, row, 60, 8 + size*8);
   doc.text(project_code, 12, row+6);
-  doc.rect(70, row, 43, 8);
+  doc.rect(70, row, 43, 8 + size*8);
   doc.text(grossFormatted, 72, row+6);
-  doc.rect(113, row, 43, 8);
+  doc.rect(113, row, 43, 8 + size*8);
   doc.text(taxFormatted, 115, row+6);
-  doc.rect(156, row, 44, 8);
+  doc.rect(156, row, 44, 8 + size*8);
   doc.text(netFormatted, 158, row+6);
 
   return
