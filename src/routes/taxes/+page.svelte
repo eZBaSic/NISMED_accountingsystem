@@ -282,7 +282,7 @@
 			</select>
 		</div>
 
-		<span>to</span>
+		<span style="font-weight: 600; font-size: 1.2rem;">to</span>
 
 		<!-- END MONTH -->
 		<div class="project-selector">
@@ -416,6 +416,7 @@
 	.project-selector {
 		flex: 1 1 auto;
 		min-width: 0;
+		margin: 0.5rem;
 	}
 
 	.project-select {
@@ -548,5 +549,11 @@
 		background: oklch(43.2% 0.1273 151.85);
 		transform: translateY(-1px);
 		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.project-selector-wrapper {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
 	}
 </style>
