@@ -23,7 +23,7 @@
 
 		return allVouchers
 			.filter(
-				(v) =>
+				(v: any) =>
 					new Date(v.date).getFullYear() ===
 						selectedYear &&
 					v.projects?.code ===
@@ -48,7 +48,7 @@
 		if (!selectedYear) return [];
 
 		const filtered = allVouchers.filter(
-			(v) =>
+			(v: any) =>
 				new Date(v.date).getFullYear() === selectedYear
 		);
 
