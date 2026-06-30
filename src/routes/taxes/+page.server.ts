@@ -15,11 +15,13 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 
 	const { data: profile } = await supabase
 		.from('profiles')
-		.select('role')
+		.select('first_name, last_name, role')
 		.eq('id', user.id)
 		.single();
 
 	const isAdmin = profile?.role === 'admin';
+	const firstName = profile?.first_name?.toLowerCase() ?? '';
+	const lastName = profile?.last_name?.toLowerCase() ?? '';
 
 	let projects: { id: number; code: string }[] = [];
 
@@ -36,7 +38,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 			.select('project_id')
 			.eq('user_id', user.id);
 
-		const ids = assignments?.map((x) => x.project_id) ?? [];
+		const ids = assignments?.map((x: any) => x.project_id) ?? [];
 
 		if (ids.length > 0) {
 			const { data } = await supabase
@@ -59,7 +61,8 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		};
 	}
 
-	const { data: vouchers, error: vouchersError } = await supabase
+	let vouchers = [];
+	let { data: vouchersData, error: vouchersError } = await supabase
 		.from('vouchers')
 		.select(`
 			id,
@@ -83,13 +86,31 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	if (vouchersError) {
 		throw vouchersError;
 	}
+
+	if (isAdmin) {
+		vouchers = vouchersData;
+
+	} else {
+		if (firstName != '' || lastName != '') {
+			vouchers =
+				vouchersData?.
+				filter((v: any) => {
+					const name = v.payees?.name?.toLowerCase() ?? '';
+
+					return (
+						name.includes(firstName) && name.includes(lastName)
+					);
+				})
+		}
+	}
+	
 	const years = [
 		...new Set(
 			(vouchers ?? [])
-				.map((v) => new Date(v.date).getFullYear())
+				.map((v: any) => new Date(v.date).getFullYear())
 				.filter(Boolean)
 		)
-	].sort((a, b) => b - a) as number[];
+	].sort((a: any, b: any) => b - a) as number[];
 
 	return {
 		projects,

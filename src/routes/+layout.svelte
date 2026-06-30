@@ -32,9 +32,6 @@
     <div class="flex items-center justify-between h-16">
       <!-- Left: Logo and nav links -->
       <div class="flex items-center gap-5">
-        <a href="/dashboard" class="flex items-center gap-2 ">
-          <img src="/nismed.png" alt="NISMED Logo" class="h-13 w-13 rounded-md bg-white p-1 shadow" />
-        </a>
         {#each [
           {href: "/dashboard", title: "Dashboard"},
           {href: "/vouchers", title: "Vouchers"},

@@ -7,6 +7,23 @@
 
 	// Project selection - expanded to include all fields needed for PDF
 	let years: number[] = $derived(data.years);
+	const months = [
+		{ value: 1, label: 'January' },
+		{ value: 2, label: 'February' },
+		{ value: 3, label: 'March' },
+		{ value: 4, label: 'April' },
+		{ value: 5, label: 'May' },
+		{ value: 6, label: 'June' },
+		{ value: 7, label: 'July' },
+		{ value: 8, label: 'August' },
+		{ value: 9, label: 'September' },
+		{ value: 10, label: 'October' },
+		{ value: 11, label: 'November' },
+		{ value: 12, label: 'December' }
+	];
+
+	let startMonth = $state(1);
+	let endMonth = $state(12);
 
 	let selectedYear = $derived<number | null>(
 		years[0] ?? null
@@ -22,13 +39,17 @@
 			return [];
 
 		return allVouchers
-			.filter(
-				(v) =>
-					new Date(v.date).getFullYear() ===
-						selectedYear &&
-					v.projects?.code ===
-						selectedProjectCode
-			)
+			.filter((v: any) => {
+				const date = new Date(v.date);
+				const month = date.getMonth() + 1;
+
+				return (
+					date.getFullYear() === selectedYear &&
+					month >= startMonth &&
+					month <= endMonth &&
+					v.projects?.code === selectedProjectCode
+				);
+			})
 			.map((v: any) => ({
 				id: v.id,
 				dv_no: v.dv_no,
@@ -47,10 +68,16 @@
     const yearly = $derived.by(() => {
 		if (!selectedYear) return [];
 
-		const filtered = allVouchers.filter(
-			(v) =>
-				new Date(v.date).getFullYear() === selectedYear
-		);
+		const filtered = allVouchers.filter((v: any) => {
+			const date = new Date(v.date);
+			const month = date.getMonth() + 1;
+
+			return (
+				date.getFullYear() === selectedYear &&
+				month >= startMonth &&
+				month <= endMonth
+			);
+		});
 
 		const yearlyMap: Record<string, any> = {};
 
@@ -95,17 +122,6 @@
 		gross: number;
         taxed_amount: number;
         net_amount: number;
-	}
-
-	interface VoucherRow {
-		id: number;
-		dv_no: string;
-		date: string;
-        gross: number;
-		project_id: number;
-		projects: {
-			code: string;
-		} | null;
 	}
 
 	// Sorting state
@@ -229,6 +245,12 @@
 			alert('Error generating PDF. Make sure jsPDF library is loaded.');
 		}
 	}
+
+	$effect(() => {
+		if (startMonth > endMonth) {
+				[startMonth, endMonth] = [endMonth, startMonth];
+			}
+	});
 </script>
 
 <div class="page-header">
@@ -247,6 +269,26 @@
 				<option value="">Select a Year...</option>
 				{#each years as year}
 					<option value={year}>{year}</option>
+				{/each}
+			</select>
+		</div>
+
+		<!-- START MONTH -->
+		<div class="project-selector">
+			<select class="project-select" bind:value={startMonth}>
+				{#each months as month}
+					<option value={month.value}>{month.label}</option>
+				{/each}
+			</select>
+		</div>
+
+		<span style="font-weight: 600; font-size: 1.2rem;">to</span>
+
+		<!-- END MONTH -->
+		<div class="project-selector">
+			<select class="project-select" bind:value={endMonth}>
+				{#each months as month}
+					<option value={month.value}>{month.label}</option>
 				{/each}
 			</select>
 		</div>
@@ -374,6 +416,7 @@
 	.project-selector {
 		flex: 1 1 auto;
 		min-width: 0;
+		margin: 0.5rem;
 	}
 
 	.project-select {
@@ -506,5 +549,11 @@
 		background: oklch(43.2% 0.1273 151.85);
 		transform: translateY(-1px);
 		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.project-selector-wrapper {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
 	}
 </style>
