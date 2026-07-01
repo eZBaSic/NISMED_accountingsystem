@@ -28,6 +28,7 @@
 	let selectedYear = $derived<number | null>(
 		years[0] ?? null
 	);
+	let searchName = $state('');
 
 	let projects = $derived(data.projects);
 	const allVouchers = $derived(data.vouchers);
@@ -38,16 +39,24 @@
 		if (!selectedYear || !selectedProjectCode)
 			return [];
 
+		const search = searchName.trim().toLowerCase();
+
 		return allVouchers
 			.filter((v: any) => {
 				const date = new Date(v.date);
 				const month = date.getMonth() + 1;
 
+				const matchesName = search === '' ||
+					(v.payees?.name ?? '')
+					.toLowerCase()
+					.includes(search);
+
 				return (
 					date.getFullYear() === selectedYear &&
 					month >= startMonth &&
 					month <= endMonth &&
-					v.projects?.code === selectedProjectCode
+					v.projects?.code === selectedProjectCode &&
+					matchesName
 				);
 			})
 			.map((v: any) => ({
@@ -292,7 +301,20 @@
 				{/each}
 			</select>
 		</div>
+
+		
     </div>
+	<span class="text-gray-600/70">|</span>
+	<div class="project-selector-wrapper">
+		<div class="project-selector">
+			<input
+				class="project-select"
+				type="text"
+				placeholder={`Search ${vouchers.length} payees...`}
+				bind:value={searchName}
+			/>
+		</div>
+	</div>
 </div>
 
 		<!-- PROJECT CODE -->
