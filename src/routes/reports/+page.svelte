@@ -8,6 +8,44 @@
   let projects = $derived(data.projects);
   let vouchers = $derived(data.vouchers);
 
+  let search = $state('');
+
+  const years = $derived([
+    ...new Set(
+      vouchers.map((v: VoucherWithDetails) =>
+        new Date(v.date).getFullYear()
+      )
+    )
+  ].sort((a: any, b: any) => b - a));
+
+  const months = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' }
+  ];
+
+  let selectedYear = $state<number | null>(
+    years.length ? years[0] : null
+  );
+
+  let startMonth = $state(1);
+  let endMonth = $state(12);
+
+  $effect(() => {
+    if (startMonth > endMonth) {
+      [startMonth, endMonth] = [endMonth, startMonth];
+    }
+  });
+
   let selectedProjectId = $derived(
     data.selectedProjectId
   );
@@ -54,8 +92,39 @@
   });
 
   // Computed sorted vouchers
+  const filteredVouchers = $derived.by(() => {
+    return vouchers.filter((voucher: any) => {
+      const date = new Date(voucher.date);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      const matchesYear =
+        selectedYear == null || year === selectedYear;
+
+      const matchesMonth =
+        month >= startMonth &&
+        month <= endMonth;
+
+      const matchesSearch =
+        search === '' ||
+        voucher.payee_name
+          .toLowerCase()
+          .includes(search.toLowerCase());
+
+      return (
+        matchesYear &&
+        matchesMonth &&
+        matchesSearch
+      );
+    });
+  });
+
   const sortedVouchers = $derived(
-    sortVouchers(vouchers, sortField, sortDirection)
+    sortVouchers(
+      filteredVouchers,
+      sortField,
+      sortDirection
+    )
   );
 
   // Sorting function
@@ -209,15 +278,63 @@
 <div class="page-header">
   <h1 class="page-title">Reports</h1>
   <span class="text-gray-600/70">|</span>
-  <div class="project-selector">
-    <label for="project-select" class="sr-only">Select Project</label>
-    <select id="project-select" class="project-select" bind:value={selectedProjectId} onchange={(e) => changeProject(Number(e.currentTarget.value))}>
-      <option value={0}>Select a project...</option>
-      {#each projects as project}
-        <option value={project.id}>{project.code} - {project.title}</option>
-      {/each}
-    </select>
-  </div>
+
+  <div class="project-selector-wrapper">
+
+		<!-- YEAR -->
+		<div class="project-selector">
+			<label for="project-select" class="sr-only">Select Year</label>
+			<select id="project-select" class="project-select" bind:value={selectedYear}>
+				<option value="">Select a Year...</option>
+				{#each years as year}
+					<option value={year}>{year}</option>
+				{/each}
+			</select>
+		</div>
+
+		<!-- START MONTH -->
+		<div class="project-selector">
+			<select class="project-select" bind:value={startMonth}>
+				{#each months as month}
+					<option value={month.value}>{month.label}</option>
+				{/each}
+			</select>
+		</div>
+
+		<span style="font-weight: 600; font-size: 1.2rem;">to</span>
+
+		<!-- END MONTH -->
+		<div class="project-selector">
+			<select class="project-select" bind:value={endMonth}>
+				{#each months as month}
+					<option value={month.value}>{month.label}</option>
+				{/each}
+			</select>
+		</div>
+
+		
+    </div>
+	<span class="text-gray-600/70">|</span>
+	<div class="project-selector-wrapper">
+		<div class="project-selector">
+			<input
+				class="project-select"
+				type="text"
+				placeholder={`Search ${sortedVouchers.length} payees...`}
+				bind:value={search}
+			/>
+		</div>
+	</div>
+</div>
+
+<div class="project-selector">
+  <label for="project-select" class="sr-only">Select Project</label>
+  <select id="project-select" class="project-select" bind:value={selectedProjectId} onchange={(e) => changeProject(Number(e.currentTarget.value))}>
+    <option value={0}>Select a project...</option>
+    {#each projects as project}
+      <option value={project.id}>{project.code} - {project.title}</option>
+    {/each}
+  </select>
 </div>
 
 {#if selectedProjectId && selectedProjectId !== 0}
@@ -227,7 +344,7 @@
       {#if loading}
         Loading vouchers...
       {:else}
-        Showing {vouchers.length} voucher{vouchers.length !== 1 ? 's' : ''}
+        Showing {sortedVouchers.length} voucher{sortedVouchers.length !== 1 ? 's' : ''}
         {#if sortField}
           • Sorted by {sortField === 'dv_no' ? 'DV Number' : sortField === 'payee_name' ? 'Payee Name' : 'Date'} ({sortDirection === 'asc' ? 'ascending' : 'descending'})
         {/if}
@@ -240,7 +357,7 @@
       <div class="spinner"></div>
       <span>Loading vouchers...</span>
     </div>
-  {:else if vouchers.length === 0}
+  {:else if sortedVouchers.length === 0}
     <div class="no-data">
       <p>No vouchers found for this project.</p>
     </div>
@@ -446,9 +563,16 @@
   margin: 0;
 }
 
+.project-selector-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
 .project-selector {
-  flex: 1 1 auto;
-  min-width: 0;
+		flex: 1 1 auto;
+		min-width: 0;
+		margin: 0.5rem;
 }
 
 .project-select {
