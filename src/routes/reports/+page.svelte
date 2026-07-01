@@ -6,15 +6,15 @@
   let { data } = $props();
 
   let projects = $derived(data.projects);
-  let vouchers = $state(data.vouchers);
+  let vouchers = $derived(data.vouchers);
 
-  let selectedProjectId = $state(
+  let selectedProjectId = $derived(
     data.selectedProjectId
   );
 
   // Derived selected project and code
   const selectedProject = $derived(
-    projects.find((p) => p.id === selectedProjectId)
+    projects.find((p: any) => p.id === selectedProjectId)
   );
 
   const selectedProjectCode = $derived(selectedProject?.code);
