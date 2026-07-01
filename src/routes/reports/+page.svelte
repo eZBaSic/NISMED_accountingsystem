@@ -10,13 +10,15 @@
 
   let search = $state('');
 
-  const years = $derived([
-    ...new Set(
-      vouchers.map((v: VoucherWithDetails) =>
-        new Date(v.date).getFullYear()
+  const years = $derived(
+	  [
+      ...new Set(
+        vouchers.map(
+          (v: VoucherWithDetails) => new Date(v.date).getFullYear()
+        )
       )
-    )
-  ].sort((a: any, b: any) => b - a));
+    ].sort((a: any, b: any) => b - a) as number[]
+  );
 
   const months = [
     { value: 1, label: 'January' },
@@ -33,7 +35,7 @@
     { value: 12, label: 'December' }
   ];
 
-  let selectedYear = $state<number | null>(
+  let selectedYear = $derived<number | null>(
     years.length ? years[0] : null
   );
 
