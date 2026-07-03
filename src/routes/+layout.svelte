@@ -34,8 +34,8 @@
       <div class="flex items-center gap-5">
         {#each [
           {href: "/dashboard", title: "Dashboard"},
-          {href: "/vouchers", title: "Vouchers"},
           {href: "/projects", title: "Projects"},
+          {href: "/vouchers", title: "Vouchers"},
           {href: "/reports", title: "Reports"},
           {href: "/taxes", title: "Taxes"}, 
         ] as {href, title}}
