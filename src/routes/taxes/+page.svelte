@@ -193,6 +193,31 @@
 		}
     }
 
+	async function generateExcelProject(project: VoucherWithDetails []) {
+        if (!selectedProjectCode) {
+			alert('Please select a project first');
+			return;
+		}
+        try{
+            const testing: IndividualReportProject [] = project.map((p) => ({    // FIX INTERFACE
+				payee_name: p.payee_name,
+				payee_tin_id: p.payee_tin_id,
+				date: p.date,
+				dv_no: p.dv_no,
+				particulars: p.particulars,
+				gross: p.gross,
+				taxed_amount: p.taxed_amount,
+				net_amount: p.net_amount,
+				remarks: p.remarks
+		}));
+
+        await exportExcelProject(testing)
+        } catch (error) {
+			console.error('Error generating PDF:', error);
+			alert('Error generating Excel File.');
+		}
+    }
+
 	// PDF Generation Functions
 	async function generateProjectPDF(project: VoucherWithDetails []) {
 		if (!selectedProjectCode) {
@@ -394,8 +419,8 @@
 {/if}
 
 {#if selectedProjectCode}
-	<button class="pdf-button pdf-all" onclick={() =>generateProjectPDF(vouchers)}>
-		📄 Generate Project Tax Summary
+	<button class="pdf-button pdf-all" onclick={() =>generateExcelProject(vouchers)}>
+		📊 Generate Project Tax Summary
 	</button>
 	<button class="pdf-button pdf-all" onclick={() =>generateExcel(vouchers)}>
 		📊 Generate Summary of Payees
