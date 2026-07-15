@@ -40,14 +40,26 @@
 		if (!selectedYear || !selectedProjectCode)
 			return [];
 
+		const search = searchName.trim().toLowerCase();
+
 		return allVouchers
-			.filter(
-				(v) =>
-					new Date(v.date).getFullYear() ===
-						selectedYear &&
-					v.projects?.code ===
-						selectedProjectCode
-			)
+			.filter((v: any) => {
+				const date = new Date(v.date);
+				const month = date.getMonth() + 1;
+
+				const matchesName = search === '' ||
+					(v.payees?.name ?? '')
+					.toLowerCase()
+					.includes(search);
+
+				return (
+					date.getFullYear() === selectedYear &&
+					month >= startMonth &&
+					month <= endMonth &&
+					v.projects?.code === selectedProjectCode &&
+					matchesName
+				);
+			})
 			.map((v: any) => ({
 				id: v.id,
 				dv_no: v.dv_no,
@@ -58,7 +70,6 @@
 				date: v.date,
 				gross: v.gross,
 				particulars: v.particulars,
-				remarks: v.remarks ?? '',
 				has_tax_deduction: v.has_tax_deduction,
 				taxed_amount: v.has_tax_deduction ? v.gross * 0.1 : 0,
 				net_amount: v.has_tax_deduction ? v.gross * 0.9 : v.gross
@@ -67,10 +78,16 @@
     const yearly = $derived.by(() => {
 		if (!selectedYear) return [];
 
-		const filtered = allVouchers.filter(
-			(v) =>
-				new Date(v.date).getFullYear() === selectedYear
-		);
+		const filtered = allVouchers.filter((v: any) => {
+			const date = new Date(v.date);
+			const month = date.getMonth() + 1;
+
+			return (
+				date.getFullYear() === selectedYear &&
+				month >= startMonth &&
+				month <= endMonth
+			);
+		});
 
 		const yearlyMap: Record<string, any> = {};
 
@@ -92,7 +109,7 @@
 		return Object.values(yearlyMap).map((v: any) => ({
 			project_code: v.project_code,
 			gross: v.total_gross,
-			taxed_amount: v.taxed_amount,
+			taxed_amount: v.total_gross * 0.1,
 			net_amount: v.total_gross * 0.9
 		}));
 	});
