@@ -12,7 +12,10 @@ export type IndividualReportProject = {
   remarks: string;
 };
 
-export function exportExcelProject(individual: IndividualReportProject[], projectCode: string) {
+export function exportExcelProject(
+  individual: IndividualReportProject[],
+  projectCode: string
+) {
   const titleRow = [
     "Foundation for the Promotion of Science and Mathematics Education and Research, Inc."
   ];
@@ -71,7 +74,7 @@ export function exportExcelProject(individual: IndividualReportProject[], projec
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-  // Merge title rows across A:H
+  // Merge title rows
   ws["!merges"] = [
     {
       s: { r: 0, c: 0 },
@@ -83,20 +86,39 @@ export function exportExcelProject(individual: IndividualReportProject[], projec
     }
   ];
 
-  // Auto-size columns
+  // -------------------------
+  // Column widths
+  // -------------------------
+
+  const widthData = [headerRow, ...rows];
+
   const maxLengths = headerRow.map((_, colIndex) =>
     Math.max(
-      ...sheetData.map(row => String(row[colIndex] ?? "").length)
+      ...widthData.map(row =>
+        String(row[colIndex] ?? "").length
+      )
     )
   );
 
   ws["!cols"] = maxLengths.map(len => ({
-    wch: len + 3
+    wch: Math.min(len + 3, 30)
   }));
 
-  // ---------- Styles ----------
+  // -------------------------
+  // Row heights
+  // -------------------------
 
-  // Title
+  ws["!rows"] = [
+    { hpt: 24 }, // Title
+    { hpt: 20 }, // Subtitle
+    { hpt: 8 },  // Blank
+    { hpt: 20 }  // Header
+  ];
+
+  // -------------------------
+  // Title styles
+  // -------------------------
+
   ws["A1"].s = {
     font: {
       bold: true,
@@ -108,7 +130,6 @@ export function exportExcelProject(individual: IndividualReportProject[], projec
     }
   };
 
-  // Subtitle
   ws["A2"].s = {
     font: {
       bold: true,
@@ -120,15 +141,24 @@ export function exportExcelProject(individual: IndividualReportProject[], projec
     }
   };
 
-  // Table headers (row 4)
-  for (const cell of ["A4","B4","C4","D4","E4","F4","G4","H4"]) {
+  // -------------------------
+  // Header styles
+  // -------------------------
+
+  const headerCells = [
+    "A4","B4","C4","D4",
+    "E4","F4","G4","H4"
+  ];
+
+  for (const cell of headerCells) {
     ws[cell].s = {
       font: {
         bold: true
       },
       alignment: {
         horizontal: "center",
-        vertical: "center"
+        vertical: "center",
+        wrapText: false
       },
       border: {
         top: { style: "thin" },
@@ -139,8 +169,51 @@ export function exportExcelProject(individual: IndividualReportProject[], projec
     };
   }
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Report");
+  // -------------------------
+  // Data styles
+  // -------------------------
 
-  XLSX.writeFile(wb, `${projectCode}_tax.xlsx`);
+  for (let r = 5; r <= rows.length + 4; r++) {
+    for (let c = 0; c < 8; c++) {
+      const address = XLSX.utils.encode_cell({
+        r: r - 1,
+        c
+      });
+
+      if (!ws[address]) continue;
+
+      const style: any = {
+        border: {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" }
+        },
+        alignment: {
+          vertical: "center"
+        }
+      };
+
+      // Gross, Tax, Net columns
+      if (c >= 4 && c <= 6) {
+        style.alignment.horizontal = "right";
+        style.numFmt = "#,##0.00";
+      }
+
+      ws[address].s = style;
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    "Report"
+  );
+
+  XLSX.writeFile(
+    wb,
+    `${projectCode}_tax.xlsx`
+  );
 }
