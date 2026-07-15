@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { generateYearlyTaxPDF, generateProjectTaxPDF, type YearlyTaxPDFData, type ProjectTaxPDFData } from '$lib/pdfGenerator_tax';
     import {exportExcel, type IndividualReport} from '$lib/excelGenerator';
+	import {exportExcelProject, type IndividualReportProject} from '$lib/excelGenerator_project';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -69,9 +70,9 @@
 				date: v.date,
 				gross: v.gross,
 				particulars: v.particulars,
-				remarks: v.remarks ?? '',
-				taxed_amount: v.gross * 0.1,
-				net_amount: v.gross * 0.9
+				has_tax_deduction: v.has_tax_deduction,
+				taxed_amount: v.has_tax_deduction ? v.gross * 0.1 : 0,
+				net_amount: v.has_tax_deduction ? v.gross * 0.9 : v.gross
 			}));
 	});
     const yearly = $derived.by(() => {
@@ -96,11 +97,13 @@
 			if (!yearlyMap[key]) {
 				yearlyMap[key] = {
 					project_code: v.projects?.code,
-					total_gross: 0
+					total_gross: 0,
+					taxed_amount: 0
 				};
 			}
 
 			yearlyMap[key].total_gross += v.gross;
+			yearlyMap[key].taxed_amount += v.has_tax_deduction ? v.gross * 0.1 : 0;
 		}
 
 		return Object.values(yearlyMap).map((v: any) => ({
@@ -202,6 +205,31 @@
 		}));
 
         await exportExcel(testing)
+        } catch (error) {
+			console.error('Error generating PDF:', error);
+			alert('Error generating Excel File.');
+		}
+    }
+
+	async function generateExcelProject(project: VoucherWithDetails [], selectedProjectCode: string) {
+        if (!selectedProjectCode) {
+			alert('Please select a project first');
+			return;
+		}
+        try{
+            const testing: IndividualReportProject [] = project.map((p) => ({    // FIX INTERFACE
+				payee_name: p.payee_name,
+				payee_tin_id: p.payee_tin_id,
+				date: p.date,
+				dv_no: p.dv_no,
+				particulars: p.particulars,
+				gross: p.gross,
+				taxed_amount: p.taxed_amount,
+				net_amount: p.net_amount,
+				remarks: p.remarks
+		}));
+
+        await exportExcelProject(testing, selectedProjectCode)
         } catch (error) {
 			console.error('Error generating PDF:', error);
 			alert('Error generating Excel File.');
@@ -412,8 +440,8 @@
 {/if}
 
 {#if selectedProjectCode}
-	<button class="pdf-button pdf-all" onclick={() =>generateProjectPDF(vouchers)}>
-		📄 Generate Project Tax Summary
+	<button class="pdf-button pdf-all" onclick={() =>generateExcelProject(vouchers, selectedProjectCode)}>
+		📊 Generate Project Tax Summary
 	</button>
 	<button class="pdf-button pdf-all" onclick={() =>generateExcel(vouchers)}>
 		📊 Generate Summary of Payees
