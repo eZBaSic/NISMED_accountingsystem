@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { generateYearlyTaxPDF, generateProjectTaxPDF, type YearlyTaxPDFData, type ProjectTaxPDFData } from '$lib/pdfGenerator_tax';
     import {exportExcel, type IndividualReport} from '$lib/excelGenerator';
+	import {exportExcelProject, type IndividualReportProject} from '$lib/excelGenerator_project';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
