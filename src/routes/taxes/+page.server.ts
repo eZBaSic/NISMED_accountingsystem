@@ -69,6 +69,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 			dv_no,
 			date,
 			gross,
+			has_tax_deduction,
 			particulars,
 			remarks,
 			project_id,
