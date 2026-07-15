@@ -69,6 +69,7 @@
 					v.payees?.tin_id ?? '',
 				date: v.date,
 				gross: v.gross,
+				remarks: v.remarks,
 				particulars: v.particulars,
 				has_tax_deduction: v.has_tax_deduction,
 				taxed_amount: v.has_tax_deduction ? v.gross * 0.1 : 0,
