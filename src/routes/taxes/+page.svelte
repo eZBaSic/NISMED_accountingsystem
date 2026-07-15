@@ -354,9 +354,9 @@
 				<thead>
 					<tr>
 						<th>Project Code</th>
-						<th>Gross Amount</th>
+						<th>Gross Amount (₱)</th>
 						<th>Tax (10%)</th>
-						<th>Net Amount</th>
+						<th>Net Amount (₱)</th>
 					</tr>
 				</thead>
 
@@ -364,9 +364,9 @@
 					{#each yearly as year}
 						<tr>
 							<td>{year.project_code}</td>
-							<td>₱{year.gross.toLocaleString()}</td>
-							<td>₱{year.taxed_amount.toLocaleString()}</td>
-							<td>₱{year.net_amount.toLocaleString()}</td>
+							<td>{year.gross.toLocaleString()}</td>
+							<td>{year.taxed_amount.toLocaleString()}</td>
+							<td>{year.net_amount.toLocaleString()}</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -378,9 +378,9 @@
 						<th onclick={() => handleSort('date')}>Date</th>
 						<th onclick={() => handleSort('dv_no')}>DV No.</th>
 						<th onclick={() => handleSort('payee_name')}>Payee Name</th>
-						<th>Gross Amount</th>
+						<th>Gross Amount (₱)</th>
 						<th>Tax (10%)</th>
-						<th>Net Amount</th>
+						<th>Net Amount (₱)</th>
 						<th>Remarks</th>
 					</tr>
 				</thead>
@@ -391,9 +391,9 @@
 							<td>{new Date(voucher.date).toLocaleDateString()}</td>
 							<td>{voucher.dv_no}</td>
 							<td>{voucher.payee_name}</td>
-							<td>₱{voucher.gross.toLocaleString()}</td>
-							<td>₱{voucher.taxed_amount.toLocaleString()}</td>
-							<td>₱{voucher.net_amount.toLocaleString()}</td>
+							<td>{voucher.gross.toLocaleString()}</td>
+							<td>{voucher.taxed_amount.toLocaleString()}</td>
+							<td>{voucher.net_amount.toLocaleString()}</td>
 							<td>{voucher.remarks}</td>
 						</tr>
 					{/each}

@@ -384,7 +384,7 @@
             Date <span class="sort-icon">{getSortIcon('date')}</span>
           </th>
           <th>Nth Yearly</th>
-          <th>Gross Amount</th>
+          <th>Gross Amount (₱)</th>
           <th>Tax Deduction</th>
           <th>Particulars</th>
           <th>Payment Mode</th>
@@ -400,7 +400,7 @@
             <td style="text-align: center;" class="text-sm text-gray-600">{voucher.payee_address}</td>
             <td style="text-align: center;">{new Date(voucher.date).toLocaleDateString()}</td>
             <td class="text-center">{voucher.nth_yearly_voucher}</td>
-            <td class="text-center">₱{voucher.gross.toLocaleString()}</td>
+            <td class="text-center">{voucher.gross.toLocaleString()}</td>
             <td class="text-center">
               <span class="tax-badge {voucher.has_tax_deduction ? 'tax-yes' : 'tax-no'}">
                 {voucher.has_tax_deduction ? 'Yes' : 'No'}
