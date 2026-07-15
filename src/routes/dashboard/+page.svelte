@@ -97,7 +97,6 @@
 
     } catch (err) {
       console.error('Error exporting data:', err);
-      error = 'Failed to export data. Please try again.';
       isExporting = false;
       exportProgress = 0;
     }
@@ -135,25 +134,33 @@
 
   function generateVouchersCSV(vouchers: any[]): string {
     const headers = [
-      'ID', 'DV Number', 'Date', 'Gross Amount', 'Has Tax Deduction', 
+      'ID', 'DV Number', 'Date', 'Gross Amount', 'Tax Amount', "Net Amount",
       'Particulars', 'Payment Mode', 'Remarks',
       'Project Code', 'Project Title', 'Payee Name', 'Payee Address'
     ];
     
-    const rows = vouchers.map(voucher => [
-      voucher.id,
-      voucher.dv_no,
-      voucher.date,
-      voucher.gross,
-      voucher.has_tax_deduction ? 'Yes' : 'No',
-      voucher.particulars || '',
-      voucher.payment_mode || '',
-      voucher.remarks || '',
-      voucher.projects?.code || '',
-      voucher.projects?.title || '',
-      voucher.payees?.name || '',
-      voucher.payees?.address || ''
-    ]);
+    const rows = vouchers.map(voucher => {
+      const gross = Number(voucher.gross) || 0;
+      const taxAmount = voucher.has_tax_deduction ? gross * 0.10 : 0;
+      const netAmount = gross - taxAmount;
+
+      return [
+        voucher.id,
+        voucher.dv_no,
+        voucher.date,
+        gross,
+        taxAmount,
+        netAmount,
+        voucher.has_tax_deduction ? 'Yes' : 'No',
+        voucher.particulars || '',
+        voucher.payment_mode || '',
+        voucher.remarks || '',
+        voucher.projects?.code || '',
+        voucher.projects?.title || '',
+        voucher.payees?.name || '',
+        voucher.payees?.address || ''
+      ];
+    });
 
     return convertToCSV([headers, ...rows]);
   }
