@@ -276,67 +276,68 @@
   }
 
 </script>
+<div class="sticky-header">
+  <div class="page-header">
+    <h1 class="page-title">Reports</h1>
+    <span class="text-gray-600/70">|</span>
 
-<div class="page-header">
-  <h1 class="page-title">Reports</h1>
-  <span class="text-gray-600/70">|</span>
+    <div class="project-selector-wrapper">
 
-  <div class="project-selector-wrapper">
+      <!-- YEAR -->
+      <div class="project-selector">
+        <label for="project-select" class="sr-only">Select Year</label>
+        <select id="project-select" class="project-select" bind:value={selectedYear}>
+          <option value="">Select a Year...</option>
+          {#each years as year}
+            <option value={year}>{year}</option>
+          {/each}
+        </select>
+      </div>
 
-		<!-- YEAR -->
-		<div class="project-selector">
-			<label for="project-select" class="sr-only">Select Year</label>
-			<select id="project-select" class="project-select" bind:value={selectedYear}>
-				<option value="">Select a Year...</option>
-				{#each years as year}
-					<option value={year}>{year}</option>
-				{/each}
-			</select>
-		</div>
+      <!-- START MONTH -->
+      <div class="project-selector">
+        <select class="project-select" bind:value={startMonth}>
+          {#each months as month}
+            <option value={month.value}>{month.label}</option>
+          {/each}
+        </select>
+      </div>
 
-		<!-- START MONTH -->
-		<div class="project-selector">
-			<select class="project-select" bind:value={startMonth}>
-				{#each months as month}
-					<option value={month.value}>{month.label}</option>
-				{/each}
-			</select>
-		</div>
+      <span style="font-weight: 600; font-size: 1.2rem;">to</span>
 
-		<span style="font-weight: 600; font-size: 1.2rem;">to</span>
+      <!-- END MONTH -->
+      <div class="project-selector">
+        <select class="project-select" bind:value={endMonth}>
+          {#each months as month}
+            <option value={month.value}>{month.label}</option>
+          {/each}
+        </select>
+      </div>
 
-		<!-- END MONTH -->
-		<div class="project-selector">
-			<select class="project-select" bind:value={endMonth}>
-				{#each months as month}
-					<option value={month.value}>{month.label}</option>
-				{/each}
-			</select>
-		</div>
-
-		
+      
+      </div>
+    <span class="text-gray-600/70">|</span>
+    <div class="project-selector-wrapper">
+      <div class="project-selector">
+        <input
+          class="project-select"
+          type="text"
+          placeholder={`Search ${sortedVouchers.length} payees...`}
+          bind:value={search}
+        />
+      </div>
     </div>
-	<span class="text-gray-600/70">|</span>
-	<div class="project-selector-wrapper">
-		<div class="project-selector">
-			<input
-				class="project-select"
-				type="text"
-				placeholder={`Search ${sortedVouchers.length} payees...`}
-				bind:value={search}
-			/>
-		</div>
-	</div>
-</div>
+  </div>
 
-<div class="project-selector">
-  <label for="project-select" class="sr-only">Select Project</label>
-  <select id="project-select" class="project-select" bind:value={selectedProjectId} onchange={(e) => changeProject(Number(e.currentTarget.value))}>
-    <option value={0}>Select a project...</option>
-    {#each projects as project}
-      <option value={project.id}>{project.code} - {project.title}</option>
-    {/each}
-  </select>
+  <div class="project-selector">
+    <label for="project-select" class="sr-only">Select Project</label>
+    <select id="project-select" class="project-select" bind:value={selectedProjectId} onchange={(e) => changeProject(Number(e.currentTarget.value))}>
+      <option value={0}>Select a project...</option>
+      {#each projects as project}
+        <option value={project.id}>{project.code} - {project.title}</option>
+      {/each}
+    </select>
+  </div>
 </div>
 
 {#if selectedProjectId && selectedProjectId !== 0}
@@ -949,5 +950,14 @@
 
 .save-button:hover {
   background: #047857;
+}
+
+.sticky-header {
+	position: sticky;
+	top: 0px;
+	z-index: 100;
+
+	background: white;
+	border-bottom: 1px solid #ddd;
 }
 </style>

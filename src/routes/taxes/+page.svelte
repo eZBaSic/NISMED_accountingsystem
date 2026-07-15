@@ -262,57 +262,59 @@
 	});
 </script>
 
-<div class="page-header">
-	<h1 style="text-align: center;" class="page-title">
-		Summary of Taxes
-	</h1>
+<div class="sticky-header">
+	`<div class="page-header">
+		<h1 style="text-align: center;" class="page-title">
+			Summary of Taxes
+		</h1>
 
-	<span class="text-gray-600/70">|</span>
+		<span class="text-gray-600/70">|</span>
 
-	<div class="project-selector-wrapper">
+		<div class="project-selector-wrapper">
 
-		<!-- YEAR -->
-		<div class="project-selector">
-			<label for="project-select" class="sr-only">Select Year</label>
-			<select id="project-select" class="project-select" bind:value={selectedYear}>
-				<option value="">Select a Year...</option>
-				{#each years as year}
-					<option value={year}>{year}</option>
-				{/each}
-			</select>
+			<!-- YEAR -->
+			<div class="project-selector">
+				<label for="project-select" class="sr-only">Select Year</label>
+				<select id="project-select" class="project-select" bind:value={selectedYear}>
+					<option value="">Select a Year...</option>
+					{#each years as year}
+						<option value={year}>{year}</option>
+					{/each}
+				</select>
+			</div>
+
+			<!-- START MONTH -->
+			<div class="project-selector">
+				<select class="project-select" bind:value={startMonth}>
+					{#each months as month}
+						<option value={month.value}>{month.label}</option>
+					{/each}
+				</select>
+			</div>
+
+			<span style="font-weight: 600; font-size: 1.2rem;">to</span>
+
+			<!-- END MONTH -->
+			<div class="project-selector">
+				<select class="project-select" bind:value={endMonth}>
+					{#each months as month}
+						<option value={month.value}>{month.label}</option>
+					{/each}
+				</select>
+			</div>
+
+			
 		</div>
-
-		<!-- START MONTH -->
-		<div class="project-selector">
-			<select class="project-select" bind:value={startMonth}>
-				{#each months as month}
-					<option value={month.value}>{month.label}</option>
-				{/each}
-			</select>
-		</div>
-
-		<span style="font-weight: 600; font-size: 1.2rem;">to</span>
-
-		<!-- END MONTH -->
-		<div class="project-selector">
-			<select class="project-select" bind:value={endMonth}>
-				{#each months as month}
-					<option value={month.value}>{month.label}</option>
-				{/each}
-			</select>
-		</div>
-
-		
-    </div>
-	<span class="text-gray-600/70">|</span>
-	<div class="project-selector-wrapper">
-		<div class="project-selector">
-			<input
-				class="project-select"
-				type="text"
-				placeholder={`Search ${vouchers.length} payees...`}
-				bind:value={searchName}
-			/>
+		<span class="text-gray-600/70">|</span>
+		<div class="project-selector-wrapper">
+			<div class="project-selector">
+				<input
+					class="project-select"
+					type="text"
+					placeholder={`Search ${vouchers.length} payees...`}
+					bind:value={searchName}
+				/>
+			</div>
 		</div>
 	</div>
 </div>
@@ -320,87 +322,88 @@
 		<!-- PROJECT CODE -->
 {#if selectedYear && Number(selectedYear) !== 0}
 
-    <div class="project-selector">
-        <label for="project-code-select" class="sr-only">Select Project Code</label>
-        <select id="project-code-select" class="project-select" bind:value={selectedProjectCode}>
-            <option value="">All Projects</option>
-            {#each projects as project}
-                <option value={project.code}>{project.code}</option>
-            {/each}
-        </select>
-    </div>
+	<div class="project-selector">
+		<label for="project-code-select" class="sr-only">Select Project Code</label>
+		<select id="project-code-select" class="project-select" bind:value={selectedProjectCode}>
+			<option value="">All Projects</option>
+			{#each projects as project}
+				<option value={project.code}>{project.code}</option>
+			{/each}
+		</select>
+	</div>
 
-    {#if loading}
-        <div class="loading-indicator">
-            <div class="spinner"></div>
-            <span>Loading vouchers...</span>
-        </div>
+	{#if loading}
+		<div class="loading-indicator">
+			<div class="spinner"></div>
+			<span>Loading vouchers...</span>
+		</div>
 
-    {:else if yearly.length===0}
-        <div class="no-data">
-            <p>No vouchers found for this project.</p>
-        </div>
+	{:else if yearly.length===0}
+		<div class="no-data">
+			<p>No vouchers found for this project.</p>
+		</div>
 
-    {:else}
-        {#if selectedYear === null}
-            <div class="no-selection">
-                <p>Please select a year to view vouchers.</p>
-            </div>
+	{:else}
+		{#if selectedYear === null}
+			<div class="no-selection">
+				<p>Please select a year to view vouchers.</p>
+			</div>
 
-        {:else if selectedProjectCode === ''}
-            <table style="text-align: center;" class="voucher-table border-2 border-green-800">
-                <thead>
-                    <tr>
-                        <th>Project Code</th>
-                        <th>Gross Amount</th>
-                        <th>Tax (10%)</th>
-                        <th>Net Amount</th>
-                    </tr>
-                </thead>
+		{:else if selectedProjectCode === ''}
+			<table style="text-align: center;" class="voucher-table border-2 border-green-800">
+				<thead>
+					<tr>
+						<th>Project Code</th>
+						<th>Gross Amount</th>
+						<th>Tax (10%)</th>
+						<th>Net Amount</th>
+					</tr>
+				</thead>
 
-                <tbody>
-                    {#each yearly as year}
-                        <tr>
-                            <td>{year.project_code}</td>
-                            <td>₱{year.gross.toLocaleString()}</td>
-                            <td>₱{year.taxed_amount.toLocaleString()}</td>
-                            <td>₱{year.net_amount.toLocaleString()}</td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        {:else}
-            <table style="text-align: center;" class="voucher-table border-2 border-green-800">
-                <thead>
-                    <tr>
-                        <th onclick={() => handleSort('date')}>Date</th>
-                        <th onclick={() => handleSort('dv_no')}>DV No.</th>
-                        <th onclick={() => handleSort('payee_name')}>Payee Name</th>
-                        <th>Gross Amount</th>
-                        <th>Tax (10%)</th>
-                        <th>Net Amount</th>
-                        <th>Remarks</th>
-                    </tr>
-                </thead>
+				<tbody>
+					{#each yearly as year}
+						<tr>
+							<td>{year.project_code}</td>
+							<td>₱{year.gross.toLocaleString()}</td>
+							<td>₱{year.taxed_amount.toLocaleString()}</td>
+							<td>₱{year.net_amount.toLocaleString()}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{:else}
+			<table style="text-align: center;" class="voucher-table border-2 border-green-800">
+				<thead>
+					<tr>
+						<th onclick={() => handleSort('date')}>Date</th>
+						<th onclick={() => handleSort('dv_no')}>DV No.</th>
+						<th onclick={() => handleSort('payee_name')}>Payee Name</th>
+						<th>Gross Amount</th>
+						<th>Tax (10%)</th>
+						<th>Net Amount</th>
+						<th>Remarks</th>
+					</tr>
+				</thead>
 
-                <tbody>
-                    {#each sortedVouchers as voucher}
-                        <tr>
-                            <td>{new Date(voucher.date).toLocaleDateString()}</td>
-                            <td>{voucher.dv_no}</td>
-                            <td>{voucher.payee_name}</td>
-                            <td>₱{voucher.gross.toLocaleString()}</td>
-                            <td>₱{voucher.taxed_amount.toLocaleString()}</td>
-                            <td>₱{voucher.net_amount.toLocaleString()}</td>
-                            <td>{voucher.remarks}</td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        {/if}
-    {/if}
+				<tbody>
+					{#each sortedVouchers as voucher}
+						<tr>
+							<td>{new Date(voucher.date).toLocaleDateString()}</td>
+							<td>{voucher.dv_no}</td>
+							<td>{voucher.payee_name}</td>
+							<td>₱{voucher.gross.toLocaleString()}</td>
+							<td>₱{voucher.taxed_amount.toLocaleString()}</td>
+							<td>₱{voucher.net_amount.toLocaleString()}</td>
+							<td>{voucher.remarks}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{/if}
+	{/if}
 
 {/if}
+
 
 {#if selectedYear && Number(selectedYear) !== 0}
 	<button class="pdf-button pdf-all" onclick={() => generateYearlyPDF(yearly)}>
@@ -577,5 +580,14 @@
 		display: flex;
 		flex-direction: row;
 		align-items: center;
+	}
+
+	.sticky-header {
+		position: sticky;
+		top: 0px;
+		z-index: 100;
+
+		background: white;
+		border-bottom: 1px solid #ddd;
 	}
 </style>
