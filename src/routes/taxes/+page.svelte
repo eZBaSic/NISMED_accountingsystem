@@ -193,7 +193,7 @@
 		}
     }
 
-	async function generateExcelProject(project: VoucherWithDetails []) {
+	async function generateExcelProject(project: VoucherWithDetails [], selectedProjectCode: string) {
         if (!selectedProjectCode) {
 			alert('Please select a project first');
 			return;
@@ -211,7 +211,7 @@
 				remarks: p.remarks
 		}));
 
-        await exportExcelProject(testing)
+        await exportExcelProject(testing, selectedProjectCode)
         } catch (error) {
 			console.error('Error generating PDF:', error);
 			alert('Error generating Excel File.');
@@ -419,7 +419,7 @@
 {/if}
 
 {#if selectedProjectCode}
-	<button class="pdf-button pdf-all" onclick={() =>generateExcelProject(vouchers)}>
+	<button class="pdf-button pdf-all" onclick={() =>generateExcelProject(vouchers, selectedProjectCode)}>
 		📊 Generate Project Tax Summary
 	</button>
 	<button class="pdf-button pdf-all" onclick={() =>generateExcel(vouchers)}>
