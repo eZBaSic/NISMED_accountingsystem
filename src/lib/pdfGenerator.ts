@@ -351,7 +351,7 @@ export async function generateVoucherPDF(voucherData: VoucherPDFData): Promise<v
   }
 
   // Save the PDF
-  doc.save(`voucher_${dv_no.replace(/[\/\\]/g, "-")}.pdf`);
+  doc.save(`voucher_${dv_no.replace(/[\/\\]/g, "-")} ${payee_name}.pdf`);
 }
 
 /**
