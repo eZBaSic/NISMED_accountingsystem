@@ -1,51 +1,38 @@
 import * as XLSX from "xlsx-js-style";
 
-export type IndividualReportProject = {
-  payee_name: string;
-  payee_tin_id: string;
-  dv_no: string;
-  date: string;
-  particulars: string;
+export type YearlyProject = {
+  project_code: string;
   gross: number;
   taxed_amount: number;
   net_amount: number;
-  remarks: string;
 };
 
-export function exportExcelProject(
-  individual: IndividualReportProject[],
-  projectCode: string
+export function exportExcelYearly(
+  individual: YearlyProject[],
+  year: string
 ) {
   const titleRow = [
     "Foundation for the Promotion of Science and Mathematics Education and Research, Inc."
   ];
 
   const subtitleRow = [
-    `SUMMARY OF TAXES (${projectCode})`
+    `ANNUAL SUMMARY OF TAXES (${year})`
   ];
 
   const blankRow: string[] = [];
 
   const headerRow = [
-    "Date Paid",
-    "DV No.",
-    "Particulars",
-    "TIN No.",
+    "Project Code",
     "Gross",
-    "Tax (10%)",
-    "Net Amount",
-    "Remarks"
+    "Taxed Amount",
+    "Net Amount"
   ];
 
   const rows = individual.map(v => [
-    v.date,
-    v.dv_no,
-    v.particulars,
-    v.payee_tin_id,
+    v.project_code,
     v.gross,
     v.taxed_amount,
     v.net_amount,
-    v.remarks
   ]);
 
   // Totals
@@ -54,14 +41,10 @@ export function exportExcelProject(
   const totalNet = individual.reduce((s, v) => s + v.net_amount, 0);
 
   rows.push([
-    "",
-    "",
-    "",
     "TOTAL",
     totalGross,
     totalTax,
     totalNet,
-    ""
   ]);
 
   const sheetData = [
@@ -74,15 +57,18 @@ export function exportExcelProject(
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
+  // -------------------------
   // Merge title rows
+  // -------------------------
+
   ws["!merges"] = [
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 7 }
+      e: { r: 0, c: 3 }
     },
     {
       s: { r: 1, c: 0 },
-      e: { r: 1, c: 7 }
+      e: { r: 1, c: 3 }
     }
   ];
 
@@ -109,48 +95,51 @@ export function exportExcelProject(
   // -------------------------
 
   ws["!rows"] = [
-    { hpt: 24 }, // Title
-    { hpt: 20 }, // Subtitle
-    { hpt: 8 },  // Blank
-    { hpt: 20 }  // Header
+    { hpt: 24 },
+    { hpt: 20 },
+    { hpt: 8 },
+    { hpt: 20 }
   ];
 
   // -------------------------
   // Title styles
   // -------------------------
 
-  ws["A1"].s = {
-    font: {
-      bold: true,
-      sz: 16
-    },
-    alignment: {
-      horizontal: "center",
-      vertical: "center"
-    }
-  };
+  if (ws["A1"]) {
+    ws["A1"].s = {
+      font: {
+        bold: true,
+        sz: 16
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center"
+      }
+    };
+  }
 
-  ws["A2"].s = {
-    font: {
-      bold: true,
-      sz: 13
-    },
-    alignment: {
-      horizontal: "center",
-      vertical: "center"
-    }
-  };
+  if (ws["A2"]) {
+    ws["A2"].s = {
+      font: {
+        bold: true,
+        sz: 13
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center"
+      }
+    };
+  }
 
   // -------------------------
   // Header styles
   // -------------------------
 
-  const headerCells = [
-    "A4","B4","C4","D4",
-    "E4","F4","G4","H4"
-  ];
+  const headerCells = ["A4", "B4", "C4", "D4"];
 
   for (const cell of headerCells) {
+    if (!ws[cell]) continue;
+
     ws[cell].s = {
       font: {
         bold: true
@@ -174,7 +163,7 @@ export function exportExcelProject(
   // -------------------------
 
   for (let r = 5; r <= rows.length + 4; r++) {
-    for (let c = 0; c < 8; c++) {
+    for (let c = 0; c < headerRow.length; c++) {
       const address = XLSX.utils.encode_cell({
         r: r - 1,
         c
@@ -194,10 +183,22 @@ export function exportExcelProject(
         }
       };
 
-      // Gross, Tax, Net columns
-      if (c >= 4 && c <= 6) {
+      // Gross, Taxed Amount, Net Amount
+      if (c >= 1 && c <= 3) {
         style.alignment.horizontal = "right";
         style.numFmt = "#,##0.00";
+      }
+
+      // Project Code column
+      if (c === 0) {
+        style.alignment.horizontal = "left";
+      }
+
+      // Total row bold
+      if (r === rows.length + 4) {
+        style.font = {
+          bold: true
+        };
       }
 
       ws[address].s = style;
@@ -214,6 +215,6 @@ export function exportExcelProject(
 
   XLSX.writeFile(
     wb,
-    `${projectCode}_TaxReport.xlsx`
+    `${year}_TaxReport.xlsx`
   );
 }

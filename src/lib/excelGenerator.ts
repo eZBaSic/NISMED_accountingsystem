@@ -79,5 +79,5 @@ export function exportExcel(individual: IndividualReport[]) {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Report");
 
-    XLSX.writeFile(wb, "report.xlsx");
+    XLSX.writeFile(wb, "TaxReport.xlsx");
 }

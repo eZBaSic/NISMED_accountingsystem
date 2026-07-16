@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { generateYearlyTaxPDF, generateProjectTaxPDF, type YearlyTaxPDFData, type ProjectTaxPDFData } from '$lib/pdfGenerator_tax';
     import {exportExcel, type IndividualReport} from '$lib/excelGenerator';
 	import {exportExcelProject, type IndividualReportProject} from '$lib/excelGenerator_project';
+	import {exportExcelYearly, type YearlyProject} from '$lib/excelGenerator_year';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -110,7 +110,7 @@
 		return Object.values(yearlyMap).map((v: any) => ({
 			project_code: v.project_code,
 			gross: v.total_gross,
-			taxed_amount: v.total_gross * 0.1,
+			taxed_amount: v.taxed_amount,
 			net_amount: v.total_gross * 0.9
 		}));
 	});
@@ -237,52 +237,25 @@
 		}
     }
 
-	// PDF Generation Functions
-	async function generateProjectPDF(project: VoucherWithDetails []) {
-		if (!selectedProjectCode) {
-			alert('Please select a project first');
-			return;
-		}
-
-		try {
-			const projectPDFData: ProjectTaxPDFData [] = project.map((p) => ({    // FIX INTERFACE
-				id: p.id,
-				dv_no: p.dv_no,
-				payee_name: p.payee_name,
-				payee_tin_id: p.payee_tin_id,
-				date: p.date,
-				gross: p.gross,
-				particulars: p.particulars,
-                taxed_amount: p.taxed_amount,
-                net_amount: p.net_amount,
-                remarks: p.remarks
-			}));
-			await generateProjectTaxPDF(projectPDFData, selectedProjectCode);
-		} catch (error) {
-			console.error('Error generating PDF:', error);
-			alert('Error generating PDF. Make sure jsPDF library is loaded.');
-		}
-	}
-
-	async function generateYearlyPDF(yearly: YearlyWithDetails[]) {
-		if (selectedYear == null) {
+	async function generateExcelYearly(yearly: YearlyWithDetails [], year: string) {
+        if (selectedYear == null) {
 			alert('Please select a project with vouchers first');
 			return;
 		}
+        try{
+            const testing: YearlyProject [] = yearly.map((p) => ({    // FIX INTERFACE
+				project_code: p.project_code,
+				gross: p.gross,
+				taxed_amount: p.taxed_amount,
+				net_amount: p.net_amount
+		}));
 
-		try {
-            const yearlyPDFDataList: YearlyTaxPDFData[] = yearly.map((y) => ({
-                project_code: y.project_code,
-                gross: y.gross,
-                taxed_amount: y.taxed_amount,
-                net_amount: y.net_amount
-            }));    
-			await generateYearlyTaxPDF(yearlyPDFDataList, Number(selectedYear));
-		} catch (error) {
+        await exportExcelYearly(testing, year)
+        } catch (error) {
 			console.error('Error generating PDF:', error);
-			alert('Error generating PDF. Make sure jsPDF library is loaded.');
+			alert('Error generating Excel File.');
 		}
-	}
+    }
 
 	$effect(() => {
 		if (startMonth > endMonth) {
@@ -435,8 +408,8 @@
 
 
 {#if selectedYear && Number(selectedYear) !== 0}
-	<button class="pdf-button pdf-all" onclick={() => generateYearlyPDF(yearly)}>
-		📄 Generate Annual Tax Summary
+	<button class="pdf-button pdf-all" onclick={() => generateExcelYearly(yearly, String(selectedYear))}>
+		📊 Generate Annual Tax Summary
 	</button>
 {/if}
 
