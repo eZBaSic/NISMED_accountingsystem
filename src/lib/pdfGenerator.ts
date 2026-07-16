@@ -343,7 +343,12 @@ export async function generateVoucherPDF(voucherData: VoucherPDFData): Promise<v
   doc.text(`Date: ${formattedDate}`, 152.5, receiptY + 72, { align: "center" });
 
   // Main border
-  doc.rect(10, 10, 190, 240 + addY);
+  if (240 + incY + addY > 277){
+    doc.rect(10, 10, 190, 277);
+  }
+  else{
+    doc.rect(10, 10, 190, 240 + addY + incY);
+  }
 
   // Save the PDF
   doc.save(`voucher_${dv_no.replace(/[\/\\]/g, "-")}.pdf`);
@@ -639,6 +644,10 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
   doc.text(`Date: ${formattedDate}`, 152.5, receiptY + 72, { align: "center" });
 
   // Main border
-  doc.rect(10, 10, 190, 240 + addY);
-
+  if (240 + incY + addY > 277){
+    doc.rect(10, 10, 190, 277);
+  }
+  else{
+    doc.rect(10, 10, 190, 240 + addY + incY);
+  }
 }
