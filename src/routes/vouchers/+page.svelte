@@ -493,7 +493,6 @@ let sortedVoucherRows = $derived(
             {savingRow ? 'Saving...' : 'Save'}
           </button>
           <button class="text-red-500 hover:underline" onclick={() => deleteRow(getOriginalIndex(row))}>Delete</button>
-          <button class="text-red-500 hover:underline" onclick={() => generateSingleVoucherPDF(fetch(row.dv_no))}>Print</button>
         </td>
       </tr>
     {/each}
