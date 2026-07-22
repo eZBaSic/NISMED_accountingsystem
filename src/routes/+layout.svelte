@@ -27,7 +27,7 @@
 </script>
 
 {#if showNavigation}
-<nav class={`px-5 py-3 w-full bg-green-700 text-white font-display shadow-md`}>
+<nav class={`sticky top-0 z-50 px-5 py-3 w-full bg-green-700 text-white font-display shadow-md`}>
   <div class="w-full mx-auto">
     <div class="flex items-center justify-between h-16">
       <!-- Left: Logo and nav links -->

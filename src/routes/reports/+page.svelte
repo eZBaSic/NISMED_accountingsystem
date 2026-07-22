@@ -954,8 +954,8 @@
 
 .sticky-header {
 	position: sticky;
-	top: 0px;
-	z-index: 100;
+	top: 88px;          /* height of navbar */
+  z-index: 40;
 
 	background: white;
 	border-bottom: 1px solid #ddd;
