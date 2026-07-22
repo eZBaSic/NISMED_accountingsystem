@@ -319,11 +319,6 @@
 			</div>
 		</div>
 	</div>
-</div>
-
-		<!-- PROJECT CODE -->
-{#if selectedYear && Number(selectedYear) !== 0}
-
 	<div class="project-selector">
 		<label for="project-code-select" class="sr-only">Select Project Code</label>
 		<select id="project-code-select" class="project-select" bind:value={selectedProjectCode}>
@@ -333,6 +328,10 @@
 			{/each}
 		</select>
 	</div>
+</div>
+
+		<!-- PROJECT CODE -->
+	{#if selectedYear && Number(selectedYear) !== 0}
 
 	{#if loading}
 		<div class="loading-indicator">
@@ -586,8 +585,8 @@
 
 	.sticky-header {
 		position: sticky;
-		top: 0px;
-		z-index: 100;
+		top: 88px;          /* height of navbar */
+    	z-index: 40;
 
 		background: white;
 		border-bottom: 1px solid #ddd;
