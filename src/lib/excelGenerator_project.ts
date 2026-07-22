@@ -29,6 +29,7 @@ export function exportExcelProject(
   const headerRow = [
     "Date Paid",
     "DV No.",
+    "Payee Name",
     "Particulars",
     "TIN No.",
     "Gross",
@@ -40,6 +41,7 @@ export function exportExcelProject(
   const rows = individual.map(v => [
     v.date,
     v.dv_no,
+    v.payee_name,
     v.particulars,
     v.payee_tin_id,
     v.gross,
@@ -54,14 +56,15 @@ export function exportExcelProject(
   const totalNet = individual.reduce((s, v) => s + v.net_amount, 0);
 
   rows.push([
-    "",
-    "",
-    "",
-    "TOTAL",
+    "",         // Date Paid
+    "",         // DV No.
+    "",         // Payee Name
+    "TOTAL",    // Particulars
+    "",         // TIN No.
     totalGross,
     totalTax,
     totalNet,
-    ""
+    ""          // Remarks
   ]);
 
   const sheetData = [
@@ -74,15 +77,18 @@ export function exportExcelProject(
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
+  // -------------------------
   // Merge title rows
+  // -------------------------
+
   ws["!merges"] = [
     {
       s: { r: 0, c: 0 },
-      e: { r: 0, c: 7 }
+      e: { r: 0, c: 8 }
     },
     {
       s: { r: 1, c: 0 },
-      e: { r: 1, c: 7 }
+      e: { r: 1, c: 8 }
     }
   ];
 
@@ -146,8 +152,15 @@ export function exportExcelProject(
   // -------------------------
 
   const headerCells = [
-    "A4","B4","C4","D4",
-    "E4","F4","G4","H4"
+    "A4",
+    "B4",
+    "C4",
+    "D4",
+    "E4",
+    "F4",
+    "G4",
+    "H4",
+    "I4"
   ];
 
   for (const cell of headerCells) {
@@ -174,7 +187,7 @@ export function exportExcelProject(
   // -------------------------
 
   for (let r = 5; r <= rows.length + 4; r++) {
-    for (let c = 0; c < 8; c++) {
+    for (let c = 0; c < 9; c++) {
       const address = XLSX.utils.encode_cell({
         r: r - 1,
         c
@@ -194,8 +207,13 @@ export function exportExcelProject(
         }
       };
 
+      // Center TIN column
+      if (c === 4) {
+        style.alignment.horizontal = "center";
+      }
+
       // Gross, Tax, Net columns
-      if (c >= 4 && c <= 6) {
+      if (c >= 5 && c <= 7) {
         style.alignment.horizontal = "right";
         style.numFmt = "#,##0.00";
       }
