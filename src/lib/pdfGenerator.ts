@@ -156,26 +156,30 @@ export async function generateVoucherPDF(voucherData: VoucherPDFData): Promise<v
   doc.text(dv_no, 167, 41);
 
   // Address and Date row
-  doc.rect(10, 43, 20, 8);
   doc.text("Address:", 12, 49);
-  doc.rect(30, 43, 105, 8);
-  doc.text(payee_address, 32, 49);
-  doc.rect(135, 43, 30, 8);
-  doc.text("Date:", 137, 49);
-  doc.rect(165, 43, 35, 8);
-  doc.text(formattedDate, 167, 49);
+  const address = doc.splitTextToSize(`${payee_address}`, 100);
+  doc.text(address, 32, 49);
+  const lineHeight = 5; // jsPDF default approx
+  var boxHeight = (address.length-1) * lineHeight;
+  var plusY = boxHeight;
+  doc.rect(10, 43, 20, 8 + plusY);
+  doc.rect(30, 43, 105, 8 + plusY);
+  doc.rect(135, 43, 30, 8 + plusY);
+  doc.text("Date:", 137, 49 + plusY);
+  doc.rect(165, 43, 35, 8 + plusY);
+  doc.text(formattedDate, 167, 49 + plusY);
 
   // Charge vs row (using project info)
   doc.setFont("Times", "bold");
   const projectname = doc.splitTextToSize(`${project_code} - ${project_title}`, 153);
-  doc.text(projectname, 32, 57);
-  const lineHeight = 5; // jsPDF default approx
+  doc.text(projectname, 32, 57+ plusY);
   var blockHeight = (projectname.length-1) * lineHeight;
-  var addY = blockHeight;
-  doc.rect(10, 51, 20, 8 + addY);
+  var addY = blockHeight; 
+  doc.rect(10, 51 + plusY, 20, 8 + addY);
   doc.text("Charge vs:", 12, 57 + addY);
-  doc.rect(30, 51, 170, 8 + addY);
+  doc.rect(30, 51 + plusY, 170, 8 + addY);
 
+  addY = addY + plusY
   // Mode of Payment row
   doc.setFont("Times", "normal");
   doc.rect(10, 59 + addY, 30, 8);
@@ -200,14 +204,14 @@ export async function generateVoucherPDF(voucherData: VoucherPDFData): Promise<v
   doc.rect(130, 75 + addY, 70, 12 + incY);
   doc.text(grossFormatted, 195, 83 + addY, { align: "right" });
 
-  // Tax deduction (if applicable)
   let currentY = 87 + addY + incY;
+  // Tax deduction (if applicable)
   if (has_tax_deduction) {
-    doc.rect(10, currentY + addY, 120, 12);
-    doc.text("Less 10% Tax", 125, currentY + 8 + addY, { align: "right" });
-    doc.rect(130, currentY + addY, 70, 12);
-    doc.text(taxFormatted, 195, currentY + 8 + addY, { align: "right" });
-    currentY += 12 + addY;
+    doc.rect(10, currentY, 120, 12);
+    doc.text("Less 10% Tax", 125, currentY + 8, { align: "right" });
+    doc.rect(130, currentY, 70, 12);
+    doc.text(taxFormatted, 195, currentY + 8, { align: "right" });
+    currentY += 12;
   }
 
   // Total row
@@ -457,26 +461,30 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
   doc.text(dv_no, 167, 41);
 
   // Address and Date row
-  doc.rect(10, 43, 20, 8);
   doc.text("Address:", 12, 49);
-  doc.rect(30, 43, 105, 8);
-  doc.text(payee_address, 32, 49);
-  doc.rect(135, 43, 30, 8);
-  doc.text("Date:", 137, 49);
-  doc.rect(165, 43, 35, 8);
-  doc.text(formattedDate, 167, 49);
+  const address = doc.splitTextToSize(`${payee_address}`, 100);
+  doc.text(address, 32, 49);
+  const lineHeight = 5; // jsPDF default approx
+  var boxHeight = (address.length-1) * lineHeight;
+  var plusY = boxHeight;
+  doc.rect(10, 43, 20, 8 + plusY);
+  doc.rect(30, 43, 105, 8 + plusY);
+  doc.rect(135, 43, 30, 8 + plusY);
+  doc.text("Date:", 137, 49 + plusY);
+  doc.rect(165, 43, 35, 8 + plusY);
+  doc.text(formattedDate, 167, 49 + plusY);
 
-  // Charge vs row
+  // Charge vs row (using project info)
   doc.setFont("Times", "bold");
   const projectname = doc.splitTextToSize(`${project_code} - ${project_title}`, 153);
-  doc.text(projectname, 32, 57);
-  const lineHeight = 5; // jsPDF default approx
+  doc.text(projectname, 32, 57+ plusY);
   var blockHeight = (projectname.length-1) * lineHeight;
-  var addY = blockHeight;
-  doc.rect(10, 51, 20, 8 + addY);
+  var addY = blockHeight; 
+  doc.rect(10, 51 + plusY, 20, 8 + addY);
   doc.text("Charge vs:", 12, 57 + addY);
-  doc.rect(30, 51, 170, 8 + addY);
+  doc.rect(30, 51 + plusY, 170, 8 + addY);
 
+  addY = addY + plusY
   // Mode of Payment row
   doc.setFont("Times", "normal");
   doc.rect(10, 59 + addY, 30, 8);
@@ -503,6 +511,7 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
 
   // Tax deduction (if applicable)
   let currentY = 87 + addY + incY;
+  // Tax deduction (if applicable)
   if (has_tax_deduction) {
     doc.rect(10, currentY, 120, 12);
     doc.text("Less 10% Tax", 125, currentY + 8, { align: "right" });
@@ -510,7 +519,6 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
     doc.text(taxFormatted, 195, currentY + 8, { align: "right" });
     currentY += 12;
   }
-
   // Total row
   doc.setFont("Times", "bold");
   doc.rect(10, currentY, 120, 12);
@@ -648,6 +656,6 @@ function generateVoucherPage(doc: any, voucherData: VoucherPDFData): void {
     doc.rect(10, 10, 190, 277);
   }
   else{
-    doc.rect(10, 10, 190, 240 + addY + incY);
+    doc.rect(10, 10, 190, 240 + addY + incY + plusY);
   }
 }
