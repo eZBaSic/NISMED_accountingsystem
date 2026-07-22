@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { generateVoucherPDF, generateMultipleVouchersPDF, type VoucherPDFData } from "$lib/pdfGenerator";
   import { supabase } from "$lib/supabaseClient";
   import type { PageData } from './$types';
 
@@ -34,6 +35,24 @@ let sortDirection = $state<'asc' | 'desc'>('asc');
 // Loading states for save operations
 let savingRow: boolean = $state(false);
 let savingAll: boolean = $state(false);
+
+interface VoucherWithDetails {
+  id: number;
+  dv_no: string;
+  payee_name: string;
+  payee_address: string;
+  date: string;
+  nth_yearly_voucher: number;
+  gross: number;
+  has_tax_deduction: boolean;
+  particulars: string;
+  payment_mode: string;
+  remarks: string;
+  project_code: string;
+  project_title: string;
+  project_authorized_rep: string;
+  project_approver: string;
+}
 
 // When selectedProjectId changes, update all voucherRows' project_id to selectedProjectCode
 function updateProjectForRows() {
@@ -195,6 +214,9 @@ let sortedVoucherRows = $derived(
       const { error: voucherError } = await supabase
         .from('vouchers')
         .insert(voucherData);
+
+      const vouchers = await fetch(row.dv_no);
+      generateSingleVoucherPDF(vouchers[0]);
       
       if (voucherError) throw voucherError;
       alert('Voucher saved successfully!');
@@ -283,7 +305,7 @@ let sortedVoucherRows = $derived(
         const { error: voucherError } = await supabase
           .from('vouchers')
           .insert(voucherData);
-        
+
         if (voucherError) throw voucherError;
       }
       
@@ -295,6 +317,81 @@ let sortedVoucherRows = $derived(
     } finally {
       savingAll = false;
     }
+  }
+
+  async function generateSingleVoucherPDF(voucher: VoucherWithDetails) {
+
+    try {
+      const voucherPDFData: VoucherPDFData = {
+        id: voucher.id,
+        dv_no: voucher.dv_no,
+        payee_name: voucher.payee_name,
+        payee_address: voucher.payee_address,
+        date: voucher.date,
+        gross: voucher.gross,
+        has_tax_deduction: voucher.has_tax_deduction,
+        particulars: voucher.particulars,
+        payment_mode: voucher.payment_mode,
+        remarks: voucher.remarks,
+        project_code: voucher.project_code,
+        project_title: voucher.project_title,
+        authorized_rep: voucher.project_authorized_rep,
+        approver: voucher.project_approver
+      };
+
+      await generateVoucherPDF(voucherPDFData);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Make sure jsPDF library is loaded.');
+    }
+  }
+
+  async function fetch(dv: string){
+    let vouchers: VoucherWithDetails[] = [];
+		const { data } = await supabase
+			.from('vouchers')
+			.select(`
+				id,
+				dv_no,
+				date,
+				nth_yearly_voucher,
+				gross,
+				has_tax_deduction,
+				particulars,
+				payment_mode,
+				remarks,
+				payees (
+					name,
+					address
+				),
+        projects (
+          code,
+          title,
+          authorized_rep,
+          approver
+        )
+			`)
+			.eq('dv_no', dv)
+			.order('dv_no');
+
+      return vouchers =
+        data?.map((v: any): VoucherWithDetails => ({
+          id: v.id,
+          dv_no: v.dv_no,
+          payee_name: v.payees?.name ?? "",
+          payee_address: v.payees?.address ?? "",
+          date: v.date,
+          nth_yearly_voucher: v.nth_yearly_voucher,
+          gross: v.gross,
+          has_tax_deduction: v.has_tax_deduction,
+          particulars: v.particulars,
+          payment_mode: v.payment_mode,
+          remarks: v.remarks ?? "",
+          project_code: v.projects?.code ?? "",
+          project_title: v.projects?.title ?? "",
+          project_authorized_rep: v.projects?.authorized_rep ?? "",
+          project_approver: v.projects?.approver ?? "",
+        })) ?? [];
   }
 
   // Update a field in a row
@@ -396,6 +493,7 @@ let sortedVoucherRows = $derived(
             {savingRow ? 'Saving...' : 'Save'}
           </button>
           <button class="text-red-500 hover:underline" onclick={() => deleteRow(getOriginalIndex(row))}>Delete</button>
+          <button class="text-red-500 hover:underline" onclick={() => generateSingleVoucherPDF(fetch(row.dv_no))}>Print</button>
         </td>
       </tr>
     {/each}
