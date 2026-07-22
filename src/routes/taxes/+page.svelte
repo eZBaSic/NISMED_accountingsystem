@@ -265,7 +265,7 @@
 </script>
 
 <div class="sticky-header">
-	`<div class="page-header">
+	<div class="page-header">
 		<h1 style="text-align: center;" class="page-title">
 			Summary of Taxes
 		</h1>
