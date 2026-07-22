@@ -226,7 +226,7 @@
       <div class="stat-card">
         <div class="stat-icon">📁</div>
         <div class="stat-content">
-          <h3>Total Projects</h3>
+          <h3>Projects</h3>
           <p class="stat-number">{data.totalProjects}</p>
         </div>
       </div>
